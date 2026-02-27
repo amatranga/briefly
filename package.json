@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -14,5 +18,10 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "25.3.2",
+    "@types/react": "^19.2.14",
+    "typescript": "5.9.3"
   }
 }

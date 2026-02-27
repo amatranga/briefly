@@ -1,4 +1,4 @@
-export type Article = {
+type Article = {
   sourceId: string;
   sourceName: string;
   title: string;
@@ -6,3 +6,5 @@ export type Article = {
   publishedAt?: string;
   description?: string;
 };
+
+export type { Article };

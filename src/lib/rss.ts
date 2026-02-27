@@ -3,7 +3,7 @@ import type { Article } from "./types";
 
 const parser = new XMLParser({ ignoreAttributes: false });
 
-export async function fetchRssArticles(sourceId: string, sourceName: string, url: string): Promise<Article[]> {
+const fetchRssArticles = async (sourceId: string, sourceName: string, url: string): Promise<Article[]> => {
   const res = await fetch(url, { headers: {"User-Agent": "Briefly/1.0" } });
   if (!res.ok) throw new Error(`Failed RSS fetch: ${sourceName} (${res.status})`);
 
@@ -23,3 +23,5 @@ export async function fetchRssArticles(sourceId: string, sourceName: string, url
 
   return normalized.filter(article => article.title && article.link);
 }
+
+export { fetchRssArticles };

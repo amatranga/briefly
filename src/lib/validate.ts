@@ -1,8 +1,12 @@
 import { z } from "zod";
+import { TOPICS } from "@/lib/sources";
 
-export const BriefRequestSchema = z.object({
-  topics: z.array(z.string()).min(1).max(5),
+const BriefRequestSchema = z.object({
+  topics: z.array(z.enum(TOPICS)).min(1).max(5),
   limit: z.number().int().min(1).max(10).default(5),
 });
 
-export type BriefRequest = z.infer<typeof BriefRequestSchema>;
+type BriefRequest = z.infer<typeof BriefRequestSchema>;
+
+export { BriefRequestSchema };
+export type { BriefRequest };

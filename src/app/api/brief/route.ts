@@ -4,7 +4,7 @@ import { SOURCES } from "@/lib/sources";
 import { fetchRssArticles } from "@/lib/rss";
 import { summarizeFromDescription } from "@/lib/sumarize";
 
-export async function POST(req: NextRequest) {
+const POST = async (req: NextRequest) => {
   try {
     const body = await req.json();
     const parsed = BriefRequestSchema.parse(body);
@@ -36,3 +36,5 @@ export async function POST(req: NextRequest) {
     );
   };
 };
+
+export { POST };
