@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { TopicSelector } from '@/components/TopicSelector';
 import { BriefResults } from '@/components/BriefResults';
+import { Spinner } from '@/components/Spinner';
 import { Topic } from '@/lib/sources';
 
 const articleLimit = 5; 
@@ -35,21 +36,31 @@ const HomePage = () => {
   }
 
   return (
-    <main style={{ maxWidth: 860, margin: "0 auto", padding: 24 }}>
-      <h1>Briefly</h1>
-      <p>Pick topics and generate a quick daily brief.</p>
+  <main className="container">
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h1 style={{ margin: 0 }}>Briefly</h1>
+      <p className="small" style={{ marginTop: 6 }}>
+        Pick topics and generate a quick daily brief.
+      </p>
 
       <TopicSelector value={topics} onChange={setTopics} />
 
-      <button onClick={generateBrief} disabled={loading || topics.length === 0}>
-        {loading ? "Generating..." : "Generate Brief"}
+      <button className="primary" onClick={generateBrief} disabled={loading || topics.length === 0}>
+        {loading ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Spinner /> Generating...
+          </span>
+        ) : (
+          "Generate Brief"
+        )}
       </button>
 
-      {error && <p style={{ color: "crimson"}}>{error}</p>}
+      {error && <p style={{ color: "crimson", marginTop: 12 }}>{error}</p>}
+    </div>
 
-      <BriefResults articles={articles} />
-    </main>
-  );
+    <BriefResults articles={articles} />
+  </main>
+);
 }
 
 export default HomePage;

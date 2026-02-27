@@ -15,10 +15,8 @@ const BriefResults = ({ articles }: BriefResultsProps) => {
         {articles.map((article, idx) => (
           <li
             key={idx}
-            style={{
-              padding: "16px 0",
-              borderBottom: "1px solid #eee",
-            }}
+            className="card"
+            style={{ marginBottom: 12 }}
           >
             <div style={{ fontSize: 12, color: "#666" }}>
               {article.sourceName}
