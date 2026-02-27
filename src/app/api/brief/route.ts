@@ -3,6 +3,11 @@ import { BriefRequestSchema } from "@/lib/validate";
 import { SOURCES } from "@/lib/sources";
 import { fetchRssArticles } from "@/lib/rss";
 import { summarizeFromDescription } from "@/lib/sumarize";
+import { MemoryCache } from "@/lib/cache";
+import { Article } from "@/lib/types";
+
+const rssCache = new MemoryCache<Article[]>();
+const RSS_TTL_MS = 1000 * 60 * 10 // 10 minutes
 
 const POST = async (req: NextRequest) => {
   try {
@@ -13,7 +18,15 @@ const POST = async (req: NextRequest) => {
     const sources = SOURCES.filter(s => s.topics.some(t => topics.has(t)));
 
     const results = await Promise.allSettled(
-      sources.map(s => fetchRssArticles(s.id, s.name, s.url))
+      sources.map(async source => {
+        const cacheKey = `rss:${source.id}`;
+        const cached = rssCache.get(cacheKey);
+        if (cached) return cached;
+
+        const fresh = await fetchRssArticles(source.id, source.name, source.url);
+        rssCache.set(cacheKey, fresh, RSS_TTL_MS);
+        return fresh;
+      })
     );
 
     const articles = results
