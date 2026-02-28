@@ -5,6 +5,7 @@ type Article = {
   link: string;
   publishedAt?: string;
   description?: string;
+  summary?: string;
 };
 
 export type { Article };
