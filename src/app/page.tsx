@@ -70,7 +70,7 @@ const HomePage = () => {
       {lastUpdated && (
         <p className="small" style={{ marginTop: 12 }}>
           Last updated: {new Date(lastUpdated).toISOString()}
-          {cache ? ` (cached)` : ""}
+          {cache ? ` (${cache})` : ""}
         </p>
       )}
 

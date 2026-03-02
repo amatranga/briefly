@@ -64,9 +64,20 @@ const POST = async (req: NextRequest) => {
       })
     );
 
-    const articles = results
-      .filter(r => r.status === 'fulfilled')
-      .flatMap(r => (r as PromiseFulfilledResult<any>).value);
+    const errors: Array<{ sourceId: string, sourceName: string; error: string }> = [];
+
+    const articles = results.flatMap((r, idx) => {
+      const src = sources[idx];
+
+      if (r.status === 'fulfilled') return r.value;
+
+      errors.push({
+        sourceId: src.id,
+        sourceName: src.name,
+        error: (r.reason?.message ?? String(r.reason)).slice(0, 200),
+      });
+      return [];
+    });
 
     // rough sort by date if present (fallback is original order)
     articles.sort((a, b) => (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0));
@@ -98,7 +109,7 @@ const POST = async (req: NextRequest) => {
     });
 
     // If cache missed, cache response
-    const payload = { items };
+    const payload = { items, errors };
     briefCache.set(briefCacheKey, payload, BRIEF_TTL_MS);
 
     return NextResponse.json({
