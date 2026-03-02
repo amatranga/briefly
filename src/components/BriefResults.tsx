@@ -5,7 +5,13 @@ type BriefResultsProps = {
 };
 
 const BriefResults = ({ articles }: BriefResultsProps) => {
-  if (!articles.length) return null;
+  if (!articles.length) {
+    return (
+      <div className='card' style={{ marginTop: 24 }}>
+        <p className='small'>No articles yet - generate a brief above.</p>
+      </div>
+    );
+  }
 
   return (
     <section style={{ marginTop: 24 }}>

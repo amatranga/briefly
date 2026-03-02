@@ -36,31 +36,36 @@ const HomePage = () => {
   }
 
   return (
-  <main className="container">
-    <div className="card" style={{ marginBottom: 16 }}>
-      <h1 style={{ margin: 0 }}>Briefly</h1>
-      <p className="small" style={{ marginTop: 6 }}>
-        Pick topics and generate a quick daily brief.
-      </p>
+    <main className="container">
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: 0 }}>Briefly</h1>
+        <p className="small" style={{ marginTop: 6 }}>
+          Pick topics and generate a quick daily brief.
+        </p>
 
-      <TopicSelector value={topics} onChange={setTopics} />
+        <TopicSelector value={topics} onChange={setTopics} />
 
-      <button className="primary" onClick={generateBrief} disabled={loading || topics.length === 0}>
-        {loading ? (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <Spinner /> Generating...
-          </span>
-        ) : (
-          "Generate Brief"
-        )}
-      </button>
+        <button
+          className="primary"
+          onClick={generateBrief}
+          disabled={loading || topics.length === 0}
+          style={{ opacity: loading ? 0.85 : 1 }}
+        >
+          {loading ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <Spinner /> Generating...
+            </span>
+          ) : (
+            "Generate Brief"
+          )}
+        </button>
 
-      {error && <p style={{ color: "crimson", marginTop: 12 }}>{error}</p>}
-    </div>
+        {error && <p style={{ color: "crimson", marginTop: 12 }}>{error}</p>}
+      </div>
 
-    <BriefResults articles={articles} />
-  </main>
-);
+      <BriefResults articles={articles} />
+    </main>
+  );
 }
 
 export default HomePage;
