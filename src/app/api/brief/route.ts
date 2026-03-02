@@ -8,6 +8,7 @@ import { Article } from "@/lib/types";
 
 const rssCache = new MemoryCache<Article[]>();
 const RSS_TTL_MS = 1000 * 60 * 10 // 10 minutes
+const ENABLE_AI = process.env.ENABLE_AI_SUMMARIES === "true";
 
 async function mapWithConcurency<T, R>(
   items: T[],
@@ -62,9 +63,27 @@ const POST = async (req: NextRequest) => {
     const limited = articles.slice(0, parsed.limit);
 
     const items = await mapWithConcurency(limited, 3, async (article) => {
+      const fallback = summarizeFromDescription(article.description);
+
+      /**
+       * AI summarization can be kind of slow due to how calls are being made (1 call per article)
+       * This means calls are network-bound + model processing time (!)
+       * 
+       * At some point, it would be worth looking into either...
+       *    1. 1 AI call to summarize all articles
+       *    2. Summarize only top 1 - 2 items
+       *    3. Streaming results
+       * 
+       * For now, we're skipping AI summaries though
+       */
+      
+      if (!ENABLE_AI) {
+        return { ...article, summary: fallback };
+      }
+
       const baseText = article.description ?? article.title;
       const ai = await summarizeWithAi(baseText);
-      return { ...article, summary: ai ?? summarizeFromDescription(article.description) };
+      return { ...article, summary: ai ?? fallback };
     });
 
     return NextResponse.json({ items });
