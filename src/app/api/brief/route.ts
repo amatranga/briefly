@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { BriefRequestSchema } from "@/lib/validate";
 import { SOURCES } from "@/lib/sources";
 import { fetchRssArticles } from "@/lib/rss";
-import { summarizeFromDescription, summarizeWithAi } from "@/lib/sumarize";
+import { summarizeFromDescription, summarizeWithAi } from "@/lib/summarize";
 import { MemoryCache } from "@/lib/cache";
 import { Article } from "@/lib/types";
 
+const EXPIRY_MS = 1000 * 60 * 10; // 10 minutes
 const rssCache = new MemoryCache<Article[]>();
-const RSS_TTL_MS = 1000 * 60 * 10 // 10 minutes
+const RSS_TTL_MS = EXPIRY_MS;
+const briefCache = new MemoryCache<any>();
+const BRIEF_TTL_MS = EXPIRY_MS;
 const ENABLE_AI = process.env.ENABLE_AI_SUMMARIES === "true";
 
-async function mapWithConcurency<T, R>(
+async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
   fn: (item: T, idx: number) => Promise<R>,
@@ -34,6 +37,18 @@ const POST = async (req: NextRequest) => {
     const body = await req.json();
     const parsed = BriefRequestSchema.parse(body);
 
+    const sortedTopics = [...parsed.topics].sort();
+    const briefCacheKey = `brief:topics=${sortedTopics.join(",")}:limit=${parsed.limit}:ai=${ENABLE_AI}`;
+    const cachedBriefEntry = briefCache.getEntry?.(briefCacheKey)
+
+    if (cachedBriefEntry) {
+      return NextResponse.json({
+        ...cachedBriefEntry.value,
+        lastUpdated: new Date(cachedBriefEntry.createdAt).toISOString(),
+        cache: "hit",
+      });
+    }
+
     const topics = new Set(parsed.topics);
     const sources = SOURCES.filter(s => s.topics.some(t => topics.has(t)));
 
@@ -56,13 +71,9 @@ const POST = async (req: NextRequest) => {
     // rough sort by date if present (fallback is original order)
     articles.sort((a, b) => (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0));
 
-    // const limited = articles.slice(0, parsed.limit).map(article => ({
-    //   ...article,
-    //   summary: summarizeFromDescription(article.description),
-    // }));
     const limited = articles.slice(0, parsed.limit);
 
-    const items = await mapWithConcurency(limited, 3, async (article) => {
+    const items = await mapWithConcurrency(limited, 3, async (article) => {
       const fallback = summarizeFromDescription(article.description);
 
       /**
@@ -86,7 +97,15 @@ const POST = async (req: NextRequest) => {
       return { ...article, summary: ai ?? fallback };
     });
 
-    return NextResponse.json({ items });
+    // If cache missed, cache response
+    const payload = { items };
+    briefCache.set(briefCacheKey, payload, BRIEF_TTL_MS);
+
+    return NextResponse.json({
+      ...payload,
+      lastUpdated: new Date().toISOString(),
+      cache: "miss",
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message ?? "Unknown error" },

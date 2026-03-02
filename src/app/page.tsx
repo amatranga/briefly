@@ -13,6 +13,8 @@ const HomePage = () => {
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [cache, setCache] = useState<"hit" | "miss" | null>(null);
 
   const generateBrief = async () => {
     setLoading(true);
@@ -28,6 +30,8 @@ const HomePage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Request failed");
       setArticles(data.items ?? []);
+      setLastUpdated(data.lastUpdated ?? null);
+      setCache(data.cache ?? null);
     } catch (e: any) {
       setError(e.message ?? "Something went wrong");
     } finally {
@@ -62,6 +66,13 @@ const HomePage = () => {
 
         {error && <p style={{ color: "crimson", marginTop: 12 }}>{error}</p>}
       </div>
+
+      {lastUpdated && (
+        <p className="small" style={{ marginTop: 12 }}>
+          Last updated: {new Date(lastUpdated).toISOString()}
+          {cache ? ` (cached)` : ""}
+        </p>
+      )}
 
       <BriefResults articles={articles} />
     </main>
