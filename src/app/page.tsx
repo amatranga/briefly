@@ -114,74 +114,82 @@ const HomePage = () => {
   }
 
   return (
-    <div className="card" style={{ marginBottom: 16 }}>
+    <main className="container">
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 4,
-        }}
-      >
-        <h1 style={{ margin: 0 }}>Briefly</h1>
-
-        <button
-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div
           style={{
-            border: "1px solid var(--border)",
-            background: "transparent",
-            borderRadius: 8,
-            padding: "6px 10px",
-            cursor: "pointer",
-            color: "var(--text)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 4,
           }}
         >
-          {theme === "light" ? "🌙" : "☀️"}
-        </button>
+          <h1 style={{ margin: 0 }}>Briefly</h1>
+
+          <button
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            style={{
+              border: "1px solid var(--border)",
+              background: "transparent",
+              borderRadius: 8,
+              padding: "6px 10px",
+              cursor: "pointer",
+              color: "var(--text)",
+            }}
+          >
+            {theme === "light" ? "🌙" : "☀️"}
+          </button>
+        </div>
+
+        <p className="small" style={{ marginTop: 6 }}>
+          Pick topics and generate a quick daily brief.
+        </p>
+
+        <TopicSelector value={topics} onChange={setTopics} />
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            className="primary"
+            onClick={() => generateBrief(false)}
+            disabled={loading || topics.length === 0}
+            style={{ opacity: loading ? 0.85 : 1 }}
+          >
+            {loading ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <Spinner /> Generating...
+              </span>
+            ) : (
+              "Generate Brief"
+            )}
+          </button>
+
+          <button
+            className="primary"
+            onClick={() => generateBrief(true)}
+            disabled={loading || topics.length === 0 || articles.length === 0}
+            style={{
+              background: "transparent",
+              color: "var(--text)",
+            }}
+          >
+            Regenerate
+          </button>
+        </div>
+
+        {error && <p style={{ color: "crimson", marginTop: 12 }}>{error}</p>}
+
+        {lastUpdated && (
+          <p className="small" style={{ marginTop: 12 }}>
+            Last updated: {new Date(lastUpdated).toLocaleTimeString()}{" "}
+            {cache ? `(${cache})` : ""}
+          </p>
+        )}
       </div>
 
-      <p className="small" style={{ marginTop: 6 }}>
-        Pick topics and generate a quick daily brief.
-      </p>
-
-      <TopicSelector value={topics} onChange={setTopics} />
-
-      <button
-        className="primary"
-        onClick={() => generateBrief(false)}
-        disabled={loading || topics.length === 0}
-        style={{ opacity: loading ? 0.85 : 1 }}
-      >
-        {loading ? (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <Spinner /> Generating...
-          </span>
-        ) : (
-          "Generate Brief"
-        )}
-      </button>
-
-      <button
-        className="primary"
-        onClick={() => generateBrief(true)}
-        disabled={loading || topics.length === 0}
-        style={{ marginLeft: 10, background: "transparent", color: "var(--text)" }}
-      >
-        Regenerate
-      </button>
-
-      {error && <p style={{ color: "crimson", marginTop: 12 }}>{error}</p>}
-
-      {lastUpdated && (
-        <p className="small" style={{ marginTop: 12 }}> 
-          Last updated: {new Date(lastUpdated).toISOString()} {cache ? `(${cache})` : ""} 
-        </p>
-      )}
-          
       <BriefResults articles={articles} />
 
-    </div>
+    </main>
   );
 }
 
