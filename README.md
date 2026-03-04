@@ -9,7 +9,7 @@ A lightweight web application that generates a **personalized daily news brief**
 
 Briefly aggregates content from trusted sources, applies relevance filtering, and presents a clean, fast interface for scanning the day’s most important stories.
 
----
+
 
 ## Features
 
@@ -21,7 +21,7 @@ Briefly aggregates content from trusted sources, applies relevance filtering, an
 - Loading states and responsive UI
 - Server-side validation and typed API contracts
 
----
+
 
 ## Tech Stack
 
@@ -43,7 +43,7 @@ Briefly aggregates content from trusted sources, applies relevance filtering, an
 - Feed-level error isolation
 - Typed data models
 
----
+
 
 ## Architecture Overview
 ```text
@@ -79,7 +79,7 @@ Prevents repeatedly fetching the same feed.
 ### Brief Cache
 Prevents regenerating identical topic requests.
 
----
+
 
 ## Example API Response
 
