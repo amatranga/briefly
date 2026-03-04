@@ -39,14 +39,17 @@ const POST = async (req: NextRequest) => {
 
     const sortedTopics = [...parsed.topics].sort();
     const briefCacheKey = `brief:topics=${sortedTopics.join(",")}:limit=${parsed.limit}:ai=${ENABLE_AI}`;
-    const cachedBriefEntry = briefCache.getEntry?.(briefCacheKey)
-
-    if (cachedBriefEntry) {
-      return NextResponse.json({
-        ...cachedBriefEntry.value,
-        lastUpdated: new Date(cachedBriefEntry.createdAt).toISOString(),
-        cache: "hit",
-      });
+    
+    if (!parsed.force) {
+      const cachedBriefEntry = briefCache.getEntry?.(briefCacheKey);
+      
+      if (cachedBriefEntry) {
+        return NextResponse.json({
+          ...cachedBriefEntry.value,
+          lastUpdated: new Date(cachedBriefEntry.createdAt).toISOString(),
+          cache: "hit",
+        });
+      }
     }
 
     const topics = new Set(parsed.topics);
@@ -110,7 +113,10 @@ const POST = async (req: NextRequest) => {
 
     // If cache missed, cache response
     const payload = { items, errors };
-    briefCache.set(briefCacheKey, payload, BRIEF_TTL_MS);
+
+    if (!parsed.force) {
+      briefCache.set(briefCacheKey, payload, BRIEF_TTL_MS);
+    }
 
     return NextResponse.json({
       ...payload,

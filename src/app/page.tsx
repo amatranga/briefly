@@ -90,7 +90,7 @@ const HomePage = () => {
     router.replace(`/?topics=${encodeURIComponent(topicsParam)}&limit=${limit}`);
   }, [topics, limit, router]);
 
-  const generateBrief = async () => {
+  const generateBrief = async (force = false) => {
     setLoading(true);
     setError(null);
 
@@ -98,7 +98,7 @@ const HomePage = () => {
       const res = await fetch("/api/brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topics, limit }),
+        body: JSON.stringify({ topics, limit, force }),
       });
 
       const data = await res.json();
@@ -149,7 +149,7 @@ const HomePage = () => {
 
       <button
         className="primary"
-        onClick={generateBrief}
+        onClick={() => generateBrief(false)}
         disabled={loading || topics.length === 0}
         style={{ opacity: loading ? 0.85 : 1 }}
       >
@@ -160,6 +160,15 @@ const HomePage = () => {
         ) : (
           "Generate Brief"
         )}
+      </button>
+
+      <button
+        className="primary"
+        onClick={() => generateBrief(true)}
+        disabled={loading || topics.length === 0}
+        style={{ marginLeft: 10, background: "transparent", color: "var(--text)" }}
+      >
+        Regenerate
       </button>
 
       {error && <p style={{ color: "crimson", marginTop: 12 }}>{error}</p>}
