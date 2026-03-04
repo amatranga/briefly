@@ -1,20 +1,48 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { TopicSelector } from '@/components/TopicSelector';
 import { BriefResults } from '@/components/BriefResults';
 import { Spinner } from '@/components/Spinner';
-import { Topic } from '@/lib/sources';
+import { TOPICS, type Topic } from '@/lib/sources';
+import type { Article } from '@/lib/types';
 
-const articleLimit = 5; 
+const articleLimit = 5;
+const DEFAULT_TOPICS: Topic[] = ["business"];
+
+const parseTopics = (param: string | null): Topic[] => {
+  if (!param) return DEFAULT_TOPICS;
+  const allowed = new Set(TOPICS);
+  const parsed = param
+    .split(",")
+    .map(p => p.trim())
+    .filter((t): t is Topic => allowed.has(t as Topic));
+
+  return parsed.length ? parsed : DEFAULT_TOPICS;
+}
+
+const parseLimit = (param: string | null): number => {
+  const n = Number(param);
+  return Number.isFinite(n) && n >= 1 && n <= 10 ? n : articleLimit;
+}
 
 const HomePage = () => {
-  const [topics, setTopics] = useState<Topic[]>(["business"]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [topics, setTopics] = useState<Topic[]>(() => parseTopics(searchParams.get("topics")));
+  const [limit, setLimit] = useState<number>(() => parseLimit(searchParams.get("limit")));
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [cache, setCache] = useState<"hit" | "miss" | null>(null);
+
+  useEffect(() => {
+    const topicsParam = topics.slice().sort().join(",");
+    router.replace(`/?topics=${encodeURIComponent(topicsParam)}&limit=${limit}`);
+  }, [topics, limit, router]);
 
   const generateBrief = async () => {
     setLoading(true);
