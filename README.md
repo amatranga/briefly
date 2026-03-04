@@ -1,9 +1,9 @@
 # Briefly
-```markdown
+
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-```
+
 
 A lightweight web application that generates a **personalized daily news brief** from multiple RSS feeds. Users select topics and receive a curated set of articles with summaries, optimized for quick reading.
 
