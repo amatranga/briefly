@@ -27,6 +27,22 @@ const parseLimit = (param: string | null): number => {
   return Number.isFinite(n) && n >= 1 && n <= 10 ? n : articleLimit;
 }
 
+const safeGet = (key: string) => {
+  // Get a value from localStorage
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+const safeSet = (key: string, val: string) => {
+  // Set a key/value in localStorage
+  try {
+    localStorage.setItem(key, val);
+  } catch {}
+}
+
 const HomePage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,6 +54,24 @@ const HomePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [cache, setCache] = useState<"hit" | "miss" | null>(null);
+
+  useEffect(() => {
+    const urlTopics = searchParams.get("topics");
+    const urlLimit = searchParams.get("limit");
+
+    if (!urlTopics) {
+      const saved = safeGet("briefly:topics");
+      if (saved) setTopics(parseTopics(saved));
+    }
+
+    if (!urlLimit) {
+      const saved = safeGet("briefly:limit");
+      if (saved) setLimit(parseLimit(saved));
+    }
+  }, []);
+
+  useEffect(() => safeSet("briefly:topics", topics.join(",")), [topics]);
+  useEffect(() => safeSet("briefly:limit", String(limit)), [limit]);
 
   useEffect(() => {
     const topicsParam = topics.slice().sort().join(",");
@@ -52,7 +86,7 @@ const HomePage = () => {
       const res = await fetch("/api/brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topics, limit: articleLimit }),
+        body: JSON.stringify({ topics, limit }),
       });
 
       const data = await res.json();
