@@ -47,6 +47,7 @@ const HomePage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [topics, setTopics] = useState<Topic[]>(() => parseTopics(searchParams.get("topics")));
   const [limit, setLimit] = useState<number>(() => parseLimit(searchParams.get("limit")));
   const [articles, setArticles] = useState<any[]>([]);
@@ -58,6 +59,9 @@ const HomePage = () => {
   useEffect(() => {
     const urlTopics = searchParams.get("topics");
     const urlLimit = searchParams.get("limit");
+    const savedTheme = safeGet("briefly:theme");
+
+    if (savedTheme === "dark" || savedTheme === "light") setTheme(savedTheme);
 
     if (!urlTopics) {
       const saved = safeGet("briefly:topics");
@@ -70,9 +74,17 @@ const HomePage = () => {
     }
   }, []);
 
+  // Set topics and limit in local storage on update
   useEffect(() => safeSet("briefly:topics", topics.join(",")), [topics]);
   useEffect(() => safeSet("briefly:limit", String(limit)), [limit]);
 
+  // Set theme in local storage on update
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    safeSet("briefly:theme", theme);
+  }, [theme]);
+
+  // When topics and limits change, update the URL
   useEffect(() => {
     const topicsParam = topics.slice().sort().join(",");
     router.replace(`/?topics=${encodeURIComponent(topicsParam)}&limit=${limit}`);
@@ -102,42 +114,65 @@ const HomePage = () => {
   }
 
   return (
-    <main className="container">
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0 }}>Briefly</h1>
-        <p className="small" style={{ marginTop: 6 }}>
-          Pick topics and generate a quick daily brief.
-        </p>
+    <div className="card" style={{ marginBottom: 16 }}>
 
-        <TopicSelector value={topics} onChange={setTopics} />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 4,
+        }}
+      >
+        <h1 style={{ margin: 0 }}>Briefly</h1>
 
         <button
-          className="primary"
-          onClick={generateBrief}
-          disabled={loading || topics.length === 0}
-          style={{ opacity: loading ? 0.85 : 1 }}
+          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+          style={{
+            border: "1px solid var(--border)",
+            background: "transparent",
+            borderRadius: 8,
+            padding: "6px 10px",
+            cursor: "pointer",
+            color: "var(--text)",
+          }}
         >
-          {loading ? (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <Spinner /> Generating...
-            </span>
-          ) : (
-            "Generate Brief"
-          )}
+          {theme === "light" ? "🌙" : "☀️"}
         </button>
-
-        {error && <p style={{ color: "crimson", marginTop: 12 }}>{error}</p>}
       </div>
 
+      <p className="small" style={{ marginTop: 6 }}>
+        Pick topics and generate a quick daily brief.
+      </p>
+
+      <TopicSelector value={topics} onChange={setTopics} />
+
+      <button
+        className="primary"
+        onClick={generateBrief}
+        disabled={loading || topics.length === 0}
+        style={{ opacity: loading ? 0.85 : 1 }}
+      >
+        {loading ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Spinner /> Generating...
+          </span>
+        ) : (
+          "Generate Brief"
+        )}
+      </button>
+
+      {error && <p style={{ color: "crimson", marginTop: 12 }}>{error}</p>}
+
       {lastUpdated && (
-        <p className="small" style={{ marginTop: 12 }}>
-          Last updated: {new Date(lastUpdated).toISOString()}
-          {cache ? ` (${cache})` : ""}
+        <p className="small" style={{ marginTop: 12 }}> 
+          Last updated: {new Date(lastUpdated).toISOString()} {cache ? `(${cache})` : ""} 
         </p>
       )}
-
+          
       <BriefResults articles={articles} />
-    </main>
+
+    </div>
   );
 }
 
