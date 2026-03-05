@@ -5,23 +5,85 @@
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
 
-A lightweight web application that generates a **personalized daily news brief** from multiple RSS feeds. Users select topics and receive a curated set of articles with summaries, optimized for quick reading.
+Briefly is a lightweight news brief generator that aggregates articles from multiple RSS feeds, ranks them by relevance, and delivers a quick, curated briefing based on user-selected topics.
 
-Briefly aggregates content from trusted sources, applies relevance filtering, and presents a clean, fast interface for scanning the day’s most important stories.
-
+The project focuses on performance, caching strategies, and simple NLP techniques to provide fast, personalized news summaries.
 
 
 ## Features
 
-- Topic-based news aggregation
-- RSS feed ingestion from multiple sources
-- Per-feed error isolation (failed feeds do not break the brief)
-- Intelligent caching for improved performance
-- Article summarization with optional AI support
-- Loading states and responsive UI
-- Server-side validation and typed API contracts
+### Topic-Based News Briefs
+Users can select topics (Business, Tech, Markets, Sports, Entertainment) and generate a curated list of relevant articles from multiple RSS sources.
 
+---
 
+### Shareable URLs
+Selected topics and article limits are encoded in the URL query string, allowing briefs to be easily shared or bookmarked.
+
+Example:
+```
+/?topics=tech,business&limit=5
+```
+
+Opening the link restores the same configuration.
+
+---
+
+### Local Preference Persistence
+User preferences are automatically saved in **localStorage**, including:
+
+- Selected topics
+- Article limit
+- UI theme
+
+Preferences are restored automatically when the user revisits the app.
+
+---
+
+### Light / Dark Mode
+The UI supports both light and dark themes with a toggle in the header.
+
+Theme preference is stored locally and restored on reload.
+
+---
+
+### Intelligent Caching
+Briefly uses two layers of caching for performance:
+
+**RSS Feed Cache**
+- Prevents repeatedly fetching the same feeds
+- Default TTL: 10 minutes
+
+**Brief Response Cache**
+- Prevents recomputing identical briefs
+- Cache key includes topics, limit, and AI settings
+
+This dramatically reduces response times for repeated requests.
+
+---
+
+### Per-Feed Error Isolation
+If one RSS feed fails, other feeds still return results.
+
+Failures are tracked and returned in the API response without breaking the entire brief.
+
+---
+
+### Relevance Scoring (Basic NLP)
+Articles are ranked using lightweight keyword-based NLP scoring.
+
+Each topic has a set of weighted keywords used to score article titles and descriptions.
+
+This allows Briefly to prioritize the most relevant articles across multiple sources.
+
+---
+
+### Optional AI Summaries
+AI-generated summaries can be enabled via environment variable:
+```
+ENABLE_AI_SUMMARIES=true
+```
+If disabled, summaries are generated from article descriptions for faster responses.
 
 ## Tech Stack
 
@@ -32,20 +94,13 @@ Briefly aggregates content from trusted sources, applies relevance filtering, an
 - CSS
 
 ### Backend
-- Next.js API routes
-- Zod for request validation
+- Next.js API Routes
 - RSS parsing
-- Optional OpenAI summarization
-
-### Architecture
 - In-memory caching layer
-- Concurrent fetch handling
-- Feed-level error isolation
-- Typed data models
+- Optional OpenAI integration
 
 
-
-## Architecture Overview
+## Architecture
 ```text
 User selects topics
 │
@@ -71,15 +126,6 @@ Aggregate + rank articles
 Return curated brief
 ```
 
-Caching exists at two levels:
-
-### RSS Cache
-Prevents repeatedly fetching the same feed.
-
-### Brief Cache
-Prevents regenerating identical topic requests.
-
-
 
 ## Example API Response
 
@@ -98,6 +144,7 @@ Prevents regenerating identical topic requests.
   "lastUpdated": "2026-03-03T18:15:00.000Z"
 }
 ```
+
 
 ## Running Locally
 Clone the repo:
@@ -122,6 +169,7 @@ Open in browser
 http://localhost:3000
 ```
 
+
 ## Environment Variables
 Optional AI summaries can be enabled with:
 ```
@@ -129,6 +177,7 @@ OPEN_AI_API_KEY=your_key_here
 ENABLE_AI_SUMMARIES=true
 ```
 If disabled, summaries are generated using the article description.
+
 
 ## Current Topics
 - Business
@@ -138,21 +187,33 @@ If disabled, summaries are generated using the article description.
 - Entertainment
 Each topic maps to one or more RSS feeds.
 
+
 ## Future Enhancements
 Planned improvements include:
-- Dark mode toggle
-- Shareable URLs for topic selection
-- User preference persistence
-- Regenerate button to bypass cache
-- Improved article relevence scoring
+- Improved NLP relevance scoring
 - Additional RSS sources
-- AI batch summarization
+- Article deduplication
+- Deployment with persistent caching
+
 
 ## Version
-### v1.0
-Initial release featuring topic selection, RSS aggregation, caching, and summarization
+
+**v1.1**
+
+Major Additions: 
+- Shareable URLs
+- Persist preferences (LocalStorage)
+- Dark mode toggle
+- Regenerate button
+- Relevance scoring
+
 
 ## Author
 Alex Matranga
 
 GitHub: [https://github.com/amatranga](https://github.com/amatranga)
+
+
+## License
+
+MIT
