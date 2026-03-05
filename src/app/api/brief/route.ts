@@ -5,6 +5,7 @@ import { fetchRssArticles } from "@/lib/rss";
 import { summarizeFromDescription, summarizeWithAi } from "@/lib/summarize";
 import { MemoryCache } from "@/lib/cache";
 import { Article } from "@/lib/types";
+import { scoreArticle } from "@/lib/relevance";
 
 const EXPIRY_MS = 1000 * 60 * 10; // 10 minutes
 const rssCache = new MemoryCache<Article[]>();
@@ -39,14 +40,17 @@ const POST = async (req: NextRequest) => {
 
     const sortedTopics = [...parsed.topics].sort();
     const briefCacheKey = `brief:topics=${sortedTopics.join(",")}:limit=${parsed.limit}:ai=${ENABLE_AI}`;
-    const cachedBriefEntry = briefCache.getEntry?.(briefCacheKey)
-
-    if (cachedBriefEntry) {
-      return NextResponse.json({
-        ...cachedBriefEntry.value,
-        lastUpdated: new Date(cachedBriefEntry.createdAt).toISOString(),
-        cache: "hit",
-      });
+    
+    if (!parsed.force) {
+      const cachedBriefEntry = briefCache.getEntry?.(briefCacheKey);
+      
+      if (cachedBriefEntry) {
+        return NextResponse.json({
+          ...cachedBriefEntry.value,
+          lastUpdated: new Date(cachedBriefEntry.createdAt).toISOString(),
+          cache: "hit",
+        });
+      }
     }
 
     const topics = new Set(parsed.topics);
@@ -80,7 +84,23 @@ const POST = async (req: NextRequest) => {
     });
 
     // rough sort by date if present (fallback is original order)
-    articles.sort((a, b) => (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0));
+    // articles.sort((a, b) => (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0));
+
+    // Sort by combined score then publishedAt
+    articles.sort((a, b) => {
+      const aText = `${a.title} ${a.description ?? ""}`;
+      const bText = `${b.title} ${b.description ?? ""}`;
+
+      const aScore = scoreArticle(aText, parsed.topics);
+      const bScore = scoreArticle(bText, parsed.topics);
+
+      if (bScore !== aScore) return bScore - aScore;
+
+      const aTime = Date.parse(a.publishedAt ?? "") || 0;
+      const bTime = Date.parse(b.publishedAt ?? "") || 0;
+
+      return bTime - aTime;
+    });
 
     const limited = articles.slice(0, parsed.limit);
 
@@ -110,7 +130,10 @@ const POST = async (req: NextRequest) => {
 
     // If cache missed, cache response
     const payload = { items, errors };
-    briefCache.set(briefCacheKey, payload, BRIEF_TTL_MS);
+
+    if (!parsed.force) {
+      briefCache.set(briefCacheKey, payload, BRIEF_TTL_MS);
+    }
 
     return NextResponse.json({
       ...payload,
