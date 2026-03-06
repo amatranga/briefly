@@ -12,78 +12,26 @@ The project focuses on performance, caching strategies, and simple NLP technique
 
 ## Features
 
-### Topic-Based News Briefs
-Users can select topics (Business, Tech, Markets, Sports, Entertainment) and generate a curated list of relevant articles from multiple RSS sources.
+### Core
+- Topic-based RSS aggregation
+- Concurrent feed fetching
+- Intelligent article ranking
+- Optional AI summaries
+- API caching for RSS and briefs
 
----
+### v1.1
+- Shareable URLs
+- LocalStorage preferences
+- Dark mode
+- Regenerate briefs
+- Keyword-based relevance scoring
 
-### Shareable URLs
-Selected topics and article limits are encoded in the URL query string, allowing briefs to be easily shared or bookmarked.
-
-Example:
-```
-/?topics=tech,business&limit=5
-```
-
-Opening the link restores the same configuration.
-
----
-
-### Local Preference Persistence
-User preferences are automatically saved in **localStorage**, including:
-
-- Selected topics
-- Article limit
-- UI theme
-
-Preferences are restored automatically when the user revisits the app.
-
----
-
-### Light / Dark Mode
-The UI supports both light and dark themes with a toggle in the header.
-
-Theme preference is stored locally and restored on reload.
-
----
-
-### Intelligent Caching
-Briefly uses two layers of caching for performance:
-
-**RSS Feed Cache**
-- Prevents repeatedly fetching the same feeds
-- Default TTL: 10 minutes
-
-**Brief Response Cache**
-- Prevents recomputing identical briefs
-- Cache key includes topics, limit, and AI settings
-
-This dramatically reduces response times for repeated requests.
-
----
-
-### Per-Feed Error Isolation
-If one RSS feed fails, other feeds still return results.
-
-Failures are tracked and returned in the API response without breaking the entire brief.
-
----
-
-### Relevance Scoring (Basic NLP)
-Articles are ranked using lightweight keyword-based NLP scoring.
-
-Each topic has a set of weighted keywords used to score article titles and descriptions.
-
-This allows Briefly to prioritize the most relevant articles across multiple sources.
-
----
-
-### Optional AI Summaries
-AI-generated summaries can be enabled via environment variable:
-```
-ENABLE_AI_SUMMARIES=true
-```
-If disabled, summaries are generated from article descriptions for faster responses.
+### v1.2
+- Bookmarks / Read Later
+- Persistent reading history
+- Historical brief log
+- Reusable SearchInput component
+- Extracted BriefView architecture
 
 ## Tech Stack
 
@@ -198,14 +146,22 @@ Planned improvements include:
 
 ## Version
 
-**v1.1**
-
-Major Additions: 
-- Shareable URLs
-- Persist preferences (LocalStorage)
-- Dark mode toggle
-- Regenerate button
-- Relevance scoring
+**v1.2**
+- Bookmarks
+  - Users can save articles to a persistent reading list stored in localStorage. Bookmarks can be searched and removed.
+- Reading History
+  - Articles are automatically marked as read when opened and tracked across sessions.
+- Historical Brief Log
+  - Generated briefs are stored locally so users can revisit previous summaries and reload them into the main view
+- UI Improvements
+  - Extracted `BriefView` component from page layout
+  - Reusable `SearchInput` component
+  - Improved article metadata display
+  - Better layout separation between views
+- Architecture Improvements
+  - Modular view components
+  - Cleaner page orchestration logic
+  - Reduced UI duplication
 
 
 ## Author
