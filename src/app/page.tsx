@@ -4,9 +4,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TopicSelector } from '@/components/TopicSelector';
 import { BriefResults } from '@/components/BriefResults';
+import { BookmarksView } from '@/components/BookmarksView';
+import { HistoryView } from '@/components/HistoryView';
+import { BriefLogView } from '@/components/BriefLogView';
+import { BriefView } from '@/components/BriefView';
 import { Spinner } from '@/components/Spinner';
 import { TOPICS, type Topic } from '@/lib/sources';
-import type { Article } from '@/lib/types';
+import type { CacheStatus } from '@/lib/types';
+import { loadJSON, saveJSON } from '@/lib/storage';
+import { saveBriefSnapshot } from '@/lib/brief';
+
+type View = "brief" | "bookmarks" | "history" | "briefs";
 
 const articleLimit = 5;
 const DEFAULT_TOPICS: Topic[] = ["business"];
@@ -27,22 +35,6 @@ const parseLimit = (param: string | null): number => {
   return Number.isFinite(n) && n >= 1 && n <= 10 ? n : articleLimit;
 }
 
-const safeGet = (key: string) => {
-  // Get a value from localStorage
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-const safeSet = (key: string, val: string) => {
-  // Set a key/value in localStorage
-  try {
-    localStorage.setItem(key, val);
-  } catch {}
-}
-
 const HomePage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -54,34 +46,35 @@ const HomePage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-  const [cache, setCache] = useState<"hit" | "miss" | null>(null);
+  const [cache, setCache] = useState<CacheStatus>(null);
+  const [view, setView] = useState<View>("brief");
 
   useEffect(() => {
     const urlTopics = searchParams.get("topics");
     const urlLimit = searchParams.get("limit");
-    const savedTheme = safeGet("briefly:theme");
+    const savedTheme = loadJSON("briefly:theme", null);
 
     if (savedTheme === "dark" || savedTheme === "light") setTheme(savedTheme);
 
     if (!urlTopics) {
-      const saved = safeGet("briefly:topics");
+      const saved = loadJSON("briefly:topics", null);
       if (saved) setTopics(parseTopics(saved));
     }
 
     if (!urlLimit) {
-      const saved = safeGet("briefly:limit");
+      const saved = loadJSON("briefly:limit", null);
       if (saved) setLimit(parseLimit(saved));
     }
   }, []);
 
   // Set topics and limit in local storage on update
-  useEffect(() => safeSet("briefly:topics", topics.join(",")), [topics]);
-  useEffect(() => safeSet("briefly:limit", String(limit)), [limit]);
+  useEffect(() => saveJSON("briefly:topics", topics.join(",")), [topics]);
+  useEffect(() => saveJSON("briefly:limit", String(limit)), [limit]);
 
   // Set theme in local storage on update
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    safeSet("briefly:theme", theme);
+    saveJSON("briefly:theme", theme);
   }, [theme]);
 
   // When topics and limits change, update the URL
@@ -106,6 +99,15 @@ const HomePage = () => {
       setArticles(data.items ?? []);
       setLastUpdated(data.lastUpdated ?? null);
       setCache(data.cache ?? null);
+
+      // v1.2: save snapshot
+      saveBriefSnapshot({
+        topics,
+        limit,
+        items: data.items ?? [],
+        cache: data.cache ?? null,
+        errors: data.errors ?? [],
+      });
     } catch (e: any) {
       setError(e.message ?? "Something went wrong");
     } finally {
@@ -146,48 +148,54 @@ const HomePage = () => {
           Pick topics and generate a quick daily brief.
         </p>
 
-        <TopicSelector value={topics} onChange={setTopics} />
-
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            className="primary"
-            onClick={() => generateBrief(false)}
-            disabled={loading || topics.length === 0}
-            style={{ opacity: loading ? 0.85 : 1 }}
-          >
-            {loading ? (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                <Spinner /> Generating...
-              </span>
-            ) : (
-              "Generate Brief"
-            )}
-          </button>
-
-          <button
-            className="primary"
-            onClick={() => generateBrief(true)}
-            disabled={loading || topics.length === 0 || articles.length === 0}
-            style={{
-              background: "transparent",
-              color: "var(--text)",
-            }}
-          >
-            Regenerate
-          </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+          {(["brief", "bookmarks", "history", "briefs"] as const).map(v => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              style={{
+                border: "1px solid var(--border)",
+                background: view === v ? "var(--card)" : "transparent",
+                borderRadius: 999,
+                padding: "6px 10px",
+                cursor: "pointer",
+                color: "var(--text)",
+                fontWeight: view === v ? 700 : 500,
+              }}
+            >
+              { v === "brief" ? "Brief" : v === "bookmarks" ? "Bookmarks" : v === "history" ? "History" : "Brief Log" }
+            </button>
+          ))}
         </div>
 
-        {error && <p style={{ color: "crimson", marginTop: 12 }}>{error}</p>}
+        
+        <TopicSelector value={topics} onChange={setTopics} />
 
-        {lastUpdated && (
-          <p className="small" style={{ marginTop: 12 }}>
-            Last updated: {new Date(lastUpdated).toLocaleTimeString()}{" "}
-            {cache ? `(${cache})` : ""}
-          </p>
+        {view === "brief" && (
+          <BriefView
+            topicsCount={topics.length}
+            articles={articles}
+            loading={loading}
+            error={error}
+            lastUpdated={lastUpdated}
+            cache={cache}
+            onGenerate={() => generateBrief(false)}
+            onRegenerate={() => generateBrief(true)}
+          />
+        )}
+        {view === "bookmarks" && <BookmarksView />}
+        {view === "history" && <HistoryView />}
+        {view === "briefs" && (
+          <BriefLogView onLoadBrief={snapshot => {
+            setArticles(snapshot.items);
+            setLastUpdated(snapshot.generatedAt);
+            setCache(snapshot.cache ?? null);
+            setLimit(snapshot.limit);
+            setView("brief");
+            }}
+          />
         )}
       </div>
-
-      <BriefResults articles={articles} />
 
     </main>
   );
