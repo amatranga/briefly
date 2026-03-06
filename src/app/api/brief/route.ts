@@ -4,7 +4,7 @@ import { SOURCES } from "@/lib/sources";
 import { fetchRssArticles } from "@/lib/rss";
 import { summarizeFromDescription, summarizeWithAi } from "@/lib/summarize";
 import { MemoryCache } from "@/lib/cache";
-import { Article } from "@/lib/types";
+import { Article, ErrorType } from "@/lib/types";
 import { scoreArticle } from "@/lib/relevance";
 
 const EXPIRY_MS = 1000 * 60 * 10; // 10 minutes
@@ -68,7 +68,7 @@ const POST = async (req: NextRequest) => {
       })
     );
 
-    const errors: Array<{ sourceId: string, sourceName: string; error: string }> = [];
+    const errors: ErrorType[] = [];
 
     const articles = results.flatMap((r, idx) => {
       const src = sources[idx];
