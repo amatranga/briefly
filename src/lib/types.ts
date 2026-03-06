@@ -8,4 +8,32 @@ type Article = {
   summary?: string;
 };
 
-export type { Article };
+type CacheStatus = "hit" | "miss" | null;
+
+type ErrorType = { sourceId: string; sourceName: string; error: string };
+
+type BookmarkItem = Pick<
+  Article,
+  "title" | "link" | "sourceName" | "publishedAt" | "summary" | "description"
+> & {
+  savedAt: string;
+};
+
+type ReadHistoryItem = Pick<
+  Article,
+  "title" | "link" | "sourceName" | "publishedAt"
+> & {
+  readAt: string
+}
+
+type BriefSnapshot = {
+  id: string;
+  generatedAt: string;
+  topics: string[];
+  limit: number;
+  cache?: CacheStatus;
+  errors?: Array<ErrorType>;
+  items: Article[];
+}
+
+export type { Article, BookmarkItem, ReadHistoryItem, BriefSnapshot, CacheStatus, ErrorType };
