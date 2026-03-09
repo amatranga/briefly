@@ -84,10 +84,12 @@ const POST = async (req: NextRequest) => {
 
     const articles = dedupeArticles(fetchedArticles);
 
+    const weights = parsed.topicWeights ?? DEFAULT_TOPIC_WEIGHTS;
+
     const rankedArticles = rankArticles(
       articles,
       parsed.topics,
-      DEFAULT_TOPIC_WEIGHTS,
+      weights,
     );
 
     const limited = rankedArticles.slice(0, parsed.limit);
