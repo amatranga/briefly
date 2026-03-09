@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BriefRequestSchema } from "@/lib/validate";
-import { SOURCES } from "@/lib/sources";
+import { DEFAULT_TOPIC_WEIGHTS, SOURCES } from "@/lib/sources";
 import { fetchRssArticles } from "@/lib/rss";
 import { summarizeFromDescription, summarizeWithAi } from "@/lib/summarize";
 import { MemoryCache } from "@/lib/cache";
 import { Article, ErrorType } from "@/lib/types";
-import { scoreArticle } from "@/lib/relevance";
+import { rankArticles } from "@/lib/relevance";
 import { dedupeArticles } from "@/lib/dedupe";
 
 const CACHE_TTL_MS = 1000 * 60 * 10; // 10 minutes
@@ -84,23 +84,13 @@ const POST = async (req: NextRequest) => {
 
     const articles = dedupeArticles(fetchedArticles);
 
-    // Sort by combined score then publishedAt
-    articles.sort((a, b) => {
-      const aText = `${a.title} ${a.description ?? ""}`;
-      const bText = `${b.title} ${b.description ?? ""}`;
+    const rankedArticles = rankArticles(
+      articles,
+      parsed.topics,
+      DEFAULT_TOPIC_WEIGHTS,
+    );
 
-      const aScore = scoreArticle(aText, parsed.topics);
-      const bScore = scoreArticle(bText, parsed.topics);
-
-      if (bScore !== aScore) return bScore - aScore;
-
-      const aTime = Date.parse(a.publishedAt ?? "") || 0;
-      const bTime = Date.parse(b.publishedAt ?? "") || 0;
-
-      return bTime - aTime;
-    });
-
-    const limited = articles.slice(0, parsed.limit);
+    const limited = rankedArticles.slice(0, parsed.limit);
 
     const items = await mapWithConcurrency(limited, 3, async (article) => {
       const fallback = summarizeFromDescription(article.description);

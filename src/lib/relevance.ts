@@ -1,4 +1,4 @@
-import type { Topic } from "@/lib/types";
+import type { Topic, Article, TopicWeights } from "@/lib/types";
 
 const KEYWORDS: Record<Topic, string[]> = {
   business: ["startup", "revenue", "merger", "acquisition", "earnings", "ceo", "layoff", "funding"],
@@ -8,16 +8,55 @@ const KEYWORDS: Record<Topic, string[]> = {
   entertainment: ["movie", "tv", "netflix", "music", "album", "tour", "box office", "celebrity"],
 };
 
-const scoreArticle = (text: string, topics: Topic[]): number => {
-  const hay = text.toLowerCase();
-  let score = 0;
+const countOccurancces = (text: string, keyword: string) : number => {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+  return (text.match(regex) ?? []).length;
+}
 
-  for (const t of topics) {
-    for (const kw of KEYWORDS[t]) {
-      if (hay.includes(kw)) score += 1;
+const scoreArticle = (
+  article: Article,
+  selectedTopics: Topic[],
+  topicWeights: TopicWeights,
+): number => {
+  const title = article.title.toLowerCase();
+  const description = (article.description ?? "").toLowerCase();
+
+  let score = 0;
+  const titleWeight = 3;
+  const descriptionWeight = 1;
+
+  for (const topic of selectedTopics) {
+    const weight = topicWeights[topic] ?? 1;
+
+    for (const keyword of KEYWORDS[topic]) {
+      const titleHits = countOccurancces(title, keyword);
+      const descriptionHits = countOccurancces(description, keyword);
+
+      score += titleHits * titleWeight * weight;
+      score += descriptionHits * descriptionWeight * weight
     }
   }
+
   return score;
 }
 
-export { scoreArticle };
+const rankArticles = (
+  articles: Article[],
+  selectedTopics: Topic[],
+  topicWeights: TopicWeights, 
+): Article[] => (
+  [...articles].sort((a, b) => {
+    const scoreA = scoreArticle(a, selectedTopics, topicWeights);
+    const scoreB = scoreArticle(b, selectedTopics, topicWeights);
+
+    if (scoreB !== scoreA) return scoreB - scoreA;
+
+    const timeA = Date.parse(a.publishedAt ?? "") || 0;
+    const timeB = Date.parse(b.publishedAt ?? "") || 0;
+
+    return timeB - timeA;
+  })
+);
+
+export { rankArticles };
