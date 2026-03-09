@@ -54,7 +54,10 @@ type RssSource = {
   topics: Topic[];
 };
 
-type TopicWeights = Record<Topic, number>
+type TopicWeights = Record<Topic, number>;
+
+const VIEWS = [ "brief", "bookmarks", "history", "briefs" ];
+type View = (typeof VIEWS)[number];
 
 export type {
   Article,
@@ -66,6 +69,7 @@ export type {
   TopicWeights,
   Topic,
   RssSource,
+  View,
 };
 
-export { TOPICS };
+export { TOPICS, VIEWS };
