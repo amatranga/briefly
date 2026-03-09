@@ -1,4 +1,4 @@
-import type { Topic } from "@/lib/sources";
+import type { Topic } from "@/lib/types";
 
 const KEYWORDS: Record<Topic, string[]> = {
   business: ["startup", "revenue", "merger", "acquisition", "earnings", "ceo", "layoff", "funding"],

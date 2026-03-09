@@ -3,14 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TopicSelector } from '@/components/TopicSelector';
-import { BriefResults } from '@/components/BriefResults';
 import { BookmarksView } from '@/components/BookmarksView';
 import { HistoryView } from '@/components/HistoryView';
 import { BriefLogView } from '@/components/BriefLogView';
 import { BriefView } from '@/components/BriefView';
 import { Spinner } from '@/components/Spinner';
-import { TOPICS, type Topic } from '@/lib/sources';
-import type { CacheStatus } from '@/lib/types';
+import { TOPICS } from '@/lib/types';
+import type { CacheStatus, Topic } from '@/lib/types';
 import { loadJSON, saveJSON } from '@/lib/storage';
 import { saveBriefSnapshot } from '@/lib/brief';
 

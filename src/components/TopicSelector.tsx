@@ -1,6 +1,6 @@
 "use client";
 
-import { TOPICS, type Topic } from '@/lib/sources';
+import { TOPICS, type Topic } from '@/lib/types';
 
 type TopicSelectorProps = {
   value: Topic[];

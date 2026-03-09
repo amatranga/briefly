@@ -1,19 +1,4 @@
-const TOPICS = [
-  "business",
-  "tech",
-  "markets",
-  "sports",
-  "entertainment",
-] as const;
-
-type Topic = typeof TOPICS[number];
-
-type RssSource = {
-  id: string;
-  name: string;
-  url: string;
-  topics: Topic[];
-};
+import { RssSource } from "@/lib/types";
 
 const SOURCES: RssSource[] = [
   { id: "morningbrew", name: "Morning Brew", url: "https://www.morningbrew.com/feed", topics: ["business"] },
@@ -24,5 +9,4 @@ const SOURCES: RssSource[] = [
   // More sources as needed
 ];
 
-export { TOPICS, SOURCES };
-export type { Topic, RssSource };
+export { SOURCES };
