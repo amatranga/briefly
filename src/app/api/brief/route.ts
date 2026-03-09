@@ -7,11 +7,9 @@ import { MemoryCache } from "@/lib/cache";
 import { Article, ErrorType } from "@/lib/types";
 import { scoreArticle } from "@/lib/relevance";
 
-const EXPIRY_MS = 1000 * 60 * 10; // 10 minutes
+const CACHE_TTL_MS = 1000 * 60 * 10; // 10 minutes
 const rssCache = new MemoryCache<Article[]>();
-const RSS_TTL_MS = EXPIRY_MS;
 const briefCache = new MemoryCache<any>();
-const BRIEF_TTL_MS = EXPIRY_MS;
 const ENABLE_AI = process.env.ENABLE_AI_SUMMARIES === "true";
 
 async function mapWithConcurrency<T, R>(
@@ -63,7 +61,7 @@ const POST = async (req: NextRequest) => {
         if (cached) return cached;
 
         const fresh = await fetchRssArticles(source.id, source.name, source.url);
-        rssCache.set(cacheKey, fresh, RSS_TTL_MS);
+        rssCache.set(cacheKey, fresh, CACHE_TTL_MS);
         return fresh;
       })
     );
@@ -82,9 +80,6 @@ const POST = async (req: NextRequest) => {
       });
       return [];
     });
-
-    // rough sort by date if present (fallback is original order)
-    // articles.sort((a, b) => (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0));
 
     // Sort by combined score then publishedAt
     articles.sort((a, b) => {
@@ -107,17 +102,8 @@ const POST = async (req: NextRequest) => {
     const items = await mapWithConcurrency(limited, 3, async (article) => {
       const fallback = summarizeFromDescription(article.description);
 
-      /**
-       * AI summarization can be kind of slow due to how calls are being made (1 call per article)
-       * This means calls are network-bound + model processing time (!)
-       * 
-       * At some point, it would be worth looking into either...
-       *    1. 1 AI call to summarize all articles
-       *    2. Summarize only top 1 - 2 items
-       *    3. Streaming results
-       * 
-       * For now, we're skipping AI summaries though
-       */
+      // Note: AI summarization is slow (1 call per article)
+      // Future optimizations: batch summarization, selective AI use, or streaming.
       
       if (!ENABLE_AI) {
         return { ...article, summary: fallback };
@@ -132,7 +118,7 @@ const POST = async (req: NextRequest) => {
     const payload = { items, errors };
 
     if (!parsed.force) {
-      briefCache.set(briefCacheKey, payload, BRIEF_TTL_MS);
+      briefCache.set(briefCacheKey, payload, CACHE_TTL_MS);
     }
 
     return NextResponse.json({
@@ -145,7 +131,7 @@ const POST = async (req: NextRequest) => {
       { error: err?.message ?? "Unknown error" },
       { status: 400 },
     );
-  };
+  }
 };
 
 export { POST };
