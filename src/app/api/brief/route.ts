@@ -6,6 +6,7 @@ import { summarizeFromDescription, summarizeWithAi } from "@/lib/summarize";
 import { MemoryCache } from "@/lib/cache";
 import { Article, ErrorType } from "@/lib/types";
 import { scoreArticle } from "@/lib/relevance";
+import { dedupeArticles } from "@/lib/dedupe";
 
 const CACHE_TTL_MS = 1000 * 60 * 10; // 10 minutes
 const rssCache = new MemoryCache<Article[]>();
@@ -68,7 +69,7 @@ const POST = async (req: NextRequest) => {
 
     const errors: ErrorType[] = [];
 
-    const articles = results.flatMap((r, idx) => {
+    const fetchedArticles = results.flatMap((r, idx) => {
       const src = sources[idx];
 
       if (r.status === 'fulfilled') return r.value;
@@ -80,6 +81,8 @@ const POST = async (req: NextRequest) => {
       });
       return [];
     });
+
+    const articles = dedupeArticles(fetchedArticles);
 
     // Sort by combined score then publishedAt
     articles.sort((a, b) => {
