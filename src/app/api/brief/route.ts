@@ -7,6 +7,7 @@ import { MemoryCache } from "@/lib/cache";
 import { Article, ErrorType } from "@/lib/types";
 import { rankArticles } from "@/lib/relevance";
 import { dedupeArticles } from "@/lib/dedupe";
+import { updateFeedFailure, updateFeedSuccess } from "@/lib/feedHealth";
 
 const CACHE_TTL_MS = 1000 * 60 * 10; // 10 minutes
 const rssCache = new MemoryCache<Article[]>();
@@ -59,10 +60,14 @@ const POST = async (req: NextRequest) => {
       sources.map(async source => {
         const cacheKey = `rss:${source.id}`;
         const cached = rssCache.get(cacheKey);
-        if (cached) return cached;
+        if (cached) {
+          updateFeedSuccess(source.id, source.name, cached.length);
+          return cached;
+        }
 
         const fresh = await fetchRssArticles(source.id, source.name, source.url);
         rssCache.set(cacheKey, fresh, CACHE_TTL_MS);
+        updateFeedSuccess(source.id, source.name, fresh.length);
         return fresh;
       })
     );
@@ -71,14 +76,17 @@ const POST = async (req: NextRequest) => {
 
     const fetchedArticles = results.flatMap((r, idx) => {
       const src = sources[idx];
-
+      
       if (r.status === 'fulfilled') return r.value;
+      
+      const errMessage = (r.reason?.message ?? String(r.reason)).slice(0, 200);
 
       errors.push({
         sourceId: src.id,
         sourceName: src.name,
-        error: (r.reason?.message ?? String(r.reason)).slice(0, 200),
+        error: errMessage,
       });
+      updateFeedFailure(src.id, src.name, errMessage);
       return [];
     });
 

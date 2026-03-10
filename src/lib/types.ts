@@ -59,6 +59,16 @@ type TopicWeights = Record<Topic, number>;
 const VIEWS = [ "brief", "bookmarks", "history", "briefs" ];
 type View = (typeof VIEWS)[number];
 
+type FeedHealth = {
+  sourceId: string;
+  sourceName: string;
+  lastCheckedAt: string;
+  lastSuccessAt?: string;
+  lastFailureAt?: string;
+  lastError?: string;
+  lastArticleCount?: number;
+}
+
 export type {
   Article,
   BookmarkItem,
@@ -70,6 +80,7 @@ export type {
   Topic,
   RssSource,
   View,
+  FeedHealth,
 };
 
 export { TOPICS, VIEWS };
