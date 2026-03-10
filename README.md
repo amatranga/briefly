@@ -33,6 +33,12 @@ The project focuses on performance, caching strategies, and simple NLP technique
 - Reusable SearchInput component
 - Extracted BriefView architecture
 
+### v1.3
+- Smart article ranking using a TF-IDF inspired scoring system
+- Improved ranking controls
+- Article deduplication
+- Feed health monitoring
+
 ## Tech Stack
 
 ### Frontend
@@ -62,10 +68,13 @@ Select relevant RSS feeds
 Fetch feeds concurrently
 │
 ▼
-Cache RSS responses
+Feed health monitoring
 │
 ▼
-Aggregate + rank articles
+Deduplicate articles
+│
+▼
+TF-IDF ranking + topic weighting
 │
 ▼
 (Optional) AI summarization
@@ -162,6 +171,40 @@ Planned improvements include:
   - Modular view components
   - Cleaner page orchestration logic
   - Reduced UI duplication
+ 
+**v1.3**
+
+v1.3 introduces smarter article ranking and improved reliability monitoring.
+
+- Smart Article Ranking
+  - Briefly now uses a TF-IDF-inspired scoring system to prioritize the most relevant stories.
+
+  - Ranking considers:
+    - Topic keyword matches
+    - Title vs description weighting
+    - User-defined topic priority
+    - Keyword rarity within the article set
+
+  - This produces a much more relevant daily brief.
+
+- Article Deduplication
+  - Duplicate stories appearing across multiple RSS feeds are automatically detected and removed using normalized title fingerprints.
+    This ensures users see unique stories instead of repeated headlines.
+
+- Feed Health Monitoring
+  - Briefly now tracks the health of RSS feeds.
+
+  - For each source the system records:
+    - Last successful fetch
+    - Last failure
+    - Last error message
+    - Article count
+    - Last checked timestamp
+
+  - Feed health is exposed through the `/api/health` endpoint.
+
+- Improved Ranking Controls
+  - Users can now adjust **Topic Priority** to influence how strongly articles from selected topics are ranked.
 
 
 ## Author
