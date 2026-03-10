@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getFeedHealth } from "@/lib/feedHealth";
 
-export async function GET() {
+const GET = async () => {
   return NextResponse.json({
     status: "ok",
     openaiConfigured: !!process.env.OPENAI_API_KEY,
@@ -10,3 +10,5 @@ export async function GET() {
     feeds: getFeedHealth(),
   });
 }
+
+export { GET };
