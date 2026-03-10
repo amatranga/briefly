@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BriefRequestSchema } from "@/lib/validate";
-import { SOURCES } from "@/lib/sources";
+import { DEFAULT_TOPIC_WEIGHTS, SOURCES } from "@/lib/sources";
 import { fetchRssArticles } from "@/lib/rss";
 import { summarizeFromDescription, summarizeWithAi } from "@/lib/summarize";
 import { MemoryCache } from "@/lib/cache";
 import { Article, ErrorType } from "@/lib/types";
-import { scoreArticle } from "@/lib/relevance";
+import { rankArticles } from "@/lib/relevance";
+import { dedupeArticles } from "@/lib/dedupe";
+import { updateFeedFailure, updateFeedSuccess } from "@/lib/feedHealth";
 
-const EXPIRY_MS = 1000 * 60 * 10; // 10 minutes
+const CACHE_TTL_MS = 1000 * 60 * 10; // 10 minutes
 const rssCache = new MemoryCache<Article[]>();
-const RSS_TTL_MS = EXPIRY_MS;
 const briefCache = new MemoryCache<any>();
-const BRIEF_TTL_MS = EXPIRY_MS;
 const ENABLE_AI = process.env.ENABLE_AI_SUMMARIES === "true";
 
 async function mapWithConcurrency<T, R>(
@@ -60,64 +60,53 @@ const POST = async (req: NextRequest) => {
       sources.map(async source => {
         const cacheKey = `rss:${source.id}`;
         const cached = rssCache.get(cacheKey);
-        if (cached) return cached;
+        if (cached) {
+          updateFeedSuccess(source.id, source.name, cached.length);
+          return cached;
+        }
 
         const fresh = await fetchRssArticles(source.id, source.name, source.url);
-        rssCache.set(cacheKey, fresh, RSS_TTL_MS);
+        rssCache.set(cacheKey, fresh, CACHE_TTL_MS);
+        updateFeedSuccess(source.id, source.name, fresh.length);
         return fresh;
       })
     );
 
     const errors: ErrorType[] = [];
 
-    const articles = results.flatMap((r, idx) => {
+    const fetchedArticles = results.flatMap((r, idx) => {
       const src = sources[idx];
-
+      
       if (r.status === 'fulfilled') return r.value;
+      
+      const errMessage = (r.reason?.message ?? String(r.reason)).slice(0, 200);
 
       errors.push({
         sourceId: src.id,
         sourceName: src.name,
-        error: (r.reason?.message ?? String(r.reason)).slice(0, 200),
+        error: errMessage,
       });
+      updateFeedFailure(src.id, src.name, errMessage);
       return [];
     });
 
-    // rough sort by date if present (fallback is original order)
-    // articles.sort((a, b) => (Date.parse(b.publishedAt ?? "") || 0) - (Date.parse(a.publishedAt ?? "") || 0));
+    const articles = dedupeArticles(fetchedArticles);
 
-    // Sort by combined score then publishedAt
-    articles.sort((a, b) => {
-      const aText = `${a.title} ${a.description ?? ""}`;
-      const bText = `${b.title} ${b.description ?? ""}`;
+    const weights = parsed.topicWeights ?? DEFAULT_TOPIC_WEIGHTS;
 
-      const aScore = scoreArticle(aText, parsed.topics);
-      const bScore = scoreArticle(bText, parsed.topics);
+    const rankedArticles = rankArticles(
+      articles,
+      parsed.topics,
+      weights,
+    );
 
-      if (bScore !== aScore) return bScore - aScore;
-
-      const aTime = Date.parse(a.publishedAt ?? "") || 0;
-      const bTime = Date.parse(b.publishedAt ?? "") || 0;
-
-      return bTime - aTime;
-    });
-
-    const limited = articles.slice(0, parsed.limit);
+    const limited = rankedArticles.slice(0, parsed.limit);
 
     const items = await mapWithConcurrency(limited, 3, async (article) => {
       const fallback = summarizeFromDescription(article.description);
 
-      /**
-       * AI summarization can be kind of slow due to how calls are being made (1 call per article)
-       * This means calls are network-bound + model processing time (!)
-       * 
-       * At some point, it would be worth looking into either...
-       *    1. 1 AI call to summarize all articles
-       *    2. Summarize only top 1 - 2 items
-       *    3. Streaming results
-       * 
-       * For now, we're skipping AI summaries though
-       */
+      // Note: AI summarization is slow (1 call per article)
+      // Future optimizations: batch summarization, selective AI use, or streaming.
       
       if (!ENABLE_AI) {
         return { ...article, summary: fallback };
@@ -132,7 +121,7 @@ const POST = async (req: NextRequest) => {
     const payload = { items, errors };
 
     if (!parsed.force) {
-      briefCache.set(briefCacheKey, payload, BRIEF_TTL_MS);
+      briefCache.set(briefCacheKey, payload, CACHE_TTL_MS);
     }
 
     return NextResponse.json({
@@ -145,7 +134,7 @@ const POST = async (req: NextRequest) => {
       { error: err?.message ?? "Unknown error" },
       { status: 400 },
     );
-  };
+  }
 };
 
 export { POST };

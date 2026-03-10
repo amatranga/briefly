@@ -1,3 +1,4 @@
+
 type Article = {
   sourceId: string;
   sourceName: string;
@@ -36,4 +37,50 @@ type BriefSnapshot = {
   items: Article[];
 }
 
-export type { Article, BookmarkItem, ReadHistoryItem, BriefSnapshot, CacheStatus, ErrorType };
+const TOPICS = [
+  "business",
+  "tech",
+  "markets",
+  "sports",
+  "entertainment",
+] as const;
+
+type Topic = typeof TOPICS[number];
+
+type RssSource = {
+  id: string;
+  name: string;
+  url: string;
+  topics: Topic[];
+};
+
+type TopicWeights = Record<Topic, number>;
+
+const VIEWS = [ "brief", "bookmarks", "history", "briefs" ];
+type View = (typeof VIEWS)[number];
+
+type FeedHealth = {
+  sourceId: string;
+  sourceName: string;
+  lastCheckedAt: string;
+  lastSuccessAt?: string;
+  lastFailureAt?: string;
+  lastError?: string;
+  lastArticleCount?: number;
+}
+
+export type {
+  Article,
+  BookmarkItem,
+  ReadHistoryItem,
+  BriefSnapshot,
+  CacheStatus,
+  ErrorType,
+  TopicWeights,
+  Topic,
+  RssSource,
+  View,
+  FeedHealth,
+};
+
+export { TOPICS, VIEWS };

@@ -1,20 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TopicSelector } from '@/components/TopicSelector';
-import { BriefResults } from '@/components/BriefResults';
 import { BookmarksView } from '@/components/BookmarksView';
 import { HistoryView } from '@/components/HistoryView';
 import { BriefLogView } from '@/components/BriefLogView';
 import { BriefView } from '@/components/BriefView';
-import { Spinner } from '@/components/Spinner';
-import { TOPICS, type Topic } from '@/lib/sources';
-import type { CacheStatus } from '@/lib/types';
+import { TopicWeightsEditor } from '@/components/TopicWeightsEditor';
+import { TOPICS, VIEWS } from '@/lib/types';
+import type { CacheStatus, Topic, View, TopicWeights } from '@/lib/types';
 import { loadJSON, saveJSON } from '@/lib/storage';
 import { saveBriefSnapshot } from '@/lib/brief';
-
-type View = "brief" | "bookmarks" | "history" | "briefs";
+import { DEFAULT_TOPIC_WEIGHTS } from '@/lib/sources';
 
 const articleLimit = 5;
 const DEFAULT_TOPICS: Topic[] = ["business"];
@@ -48,11 +46,14 @@ const HomePage = () => {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [cache, setCache] = useState<CacheStatus>(null);
   const [view, setView] = useState<View>("brief");
+  const [showSettings, setShowSettings] = useState(false);
+  const [topicWeights, setTopicWeights] = useState<TopicWeights>(DEFAULT_TOPIC_WEIGHTS);
 
   useEffect(() => {
     const urlTopics = searchParams.get("topics");
     const urlLimit = searchParams.get("limit");
     const savedTheme = loadJSON("briefly:theme", null);
+    const savedWeights = loadJSON("briefly:topicWeights", null);
 
     if (savedTheme === "dark" || savedTheme === "light") setTheme(savedTheme);
 
@@ -65,6 +66,8 @@ const HomePage = () => {
       const saved = loadJSON("briefly:limit", null);
       if (saved) setLimit(parseLimit(saved));
     }
+
+    if (savedWeights) setTopicWeights(savedWeights);
   }, []);
 
   // Set topics and limit in local storage on update
@@ -76,6 +79,11 @@ const HomePage = () => {
     document.documentElement.dataset.theme = theme;
     saveJSON("briefly:theme", theme);
   }, [theme]);
+
+  // Set topic weightsin local storage on update
+  useEffect(() => {
+    saveJSON("briefly:topicWeights", topicWeights);
+  }, [topicWeights]);
 
   // When topics and limits change, update the URL
   useEffect(() => {
@@ -91,7 +99,7 @@ const HomePage = () => {
       const res = await fetch("/api/brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topics, limit, force }),
+        body: JSON.stringify({ topics, limit, force, topicWeights }),
       });
 
       const data = await res.json();
@@ -149,7 +157,7 @@ const HomePage = () => {
         </p>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-          {(["brief", "bookmarks", "history", "briefs"] as const).map(v => (
+          {VIEWS.map(v => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -163,13 +171,38 @@ const HomePage = () => {
                 fontWeight: view === v ? 700 : 500,
               }}
             >
-              { v === "brief" ? "Brief" : v === "bookmarks" ? "Bookmarks" : v === "history" ? "History" : "Brief Log" }
+              {v.charAt(0).toUpperCase() + v.slice(1)}
             </button>
           ))}
         </div>
 
         
         <TopicSelector value={topics} onChange={setTopics} />
+
+        <div style={{ marginTop: 12, marginBottom: 16 }}>
+          <button
+            onClick={() => setShowSettings(prev => !prev)}
+            style={{
+              border: "1px solid var(--border)",
+              background: "transparent",
+              borderRadius: 10,
+              padding: "6px 10px",
+              cursor: "pointer",
+              color: "var(--text)",
+            }}
+          >
+            {showSettings ? "Hide Settings" : "Show Settings"}
+          </button>
+        
+          {showSettings && (
+            <TopicWeightsEditor
+              topics={topics}
+              weights={topicWeights}
+              onChange={setTopicWeights}
+            />
+          )}
+        </div>
+
 
         {view === "brief" && (
           <BriefView
