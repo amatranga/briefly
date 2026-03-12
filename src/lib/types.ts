@@ -69,6 +69,24 @@ type FeedHealth = {
   lastArticleCount?: number;
 }
 
+type FeedbackValue = "up" | "down";
+
+type UserPreferences = {
+  topicAffinity: Record<Topic, number>;
+  keywordAffinity: Record<string, number>;
+  articleFeedback: Record<string, FeedbackValue>;
+}
+
+type ArticleSignalStrength = "weak" | "medium" | "strong" | "negative";
+
+const KEYWORDS: Record<Topic, string[]> = {
+  business: ["startup", "revenue", "merger", "acquisition", "earnings", "ceo", "layoff", "funding"],
+  tech: ["ai", "software", "openai", "apple", "google", "microsoft", "security", "cloud", "saas"],
+  markets: ["stocks", "s&p", "nasdaq", "dow", "inflation", "fed", "rates", "yield", "crypto"],
+  sports: ["nba", "nfl", "mlb", "nhl", "score", "playoffs", "trade", "coach"],
+  entertainment: ["movie", "tv", "netflix", "music", "album", "tour", "box office", "celebrity"],
+};
+
 export type {
   Article,
   BookmarkItem,
@@ -81,6 +99,9 @@ export type {
   RssSource,
   View,
   FeedHealth,
+  FeedbackValue,
+  UserPreferences,
+  ArticleSignalStrength,
 };
 
-export { TOPICS, VIEWS };
+export { TOPICS, VIEWS, KEYWORDS };

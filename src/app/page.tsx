@@ -13,6 +13,7 @@ import type { CacheStatus, Topic, View, TopicWeights } from '@/lib/types';
 import { loadJSON, saveJSON } from '@/lib/storage';
 import { saveBriefSnapshot } from '@/lib/brief';
 import { DEFAULT_TOPIC_WEIGHTS } from '@/lib/sources';
+import { getUserPreferences } from '@/lib/preferences';
 
 const articleLimit = 5;
 const DEFAULT_TOPICS: Topic[] = ["business"];
@@ -99,7 +100,13 @@ const HomePage = () => {
       const res = await fetch("/api/brief", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topics, limit, force, topicWeights }),
+        body: JSON.stringify({
+          topics,
+          limit,
+          force,
+          topicWeights,
+          userPreferences: getUserPreferences(),
+        }),
       });
 
       const data = await res.json();
