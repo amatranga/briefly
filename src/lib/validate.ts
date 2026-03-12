@@ -14,6 +14,19 @@ const BriefRequestSchema = z.object({
       entertainment: z.number().int().min(1).max(5),
     })
     .optional(),
+  userPreferences: z
+    .object({
+      topicAffinity: z.object({
+        business: z.number(),
+        tech: z.number(),
+        markets: z.number(),
+        sports: z.number(),
+        entertainment: z.number(),
+      }),
+      keywordAffinity: z.record(z.string(), z.number()),
+      articleFeedback: z.record(z.string(), z.enum(["up", "down"])),
+    })
+    .optional(),
 });
 
 type BriefRequest = z.infer<typeof BriefRequestSchema>;
