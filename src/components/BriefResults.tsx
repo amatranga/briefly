@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import type { Article } from "@/lib/types";
-import { isBookmarked, toggleBookmark } from "@/lib/bookmark";
-import { isRead, markAsRead } from "@/lib/history";
+import { isBookmarked } from "@/lib/bookmark";
+import { isRead } from "@/lib/history";
+import { getArticleFeedback } from "@/lib/preferences";
+import { ArticleFeedback } from "@/components/ArticleFeedback";
+import { ArticleMetaData } from "@/components/ArticleMetaData";
+import { BookmarkButton } from "@/components/BookmarkButton";
+import { ArticleContent } from "@/components/ArticleContent";
 
 type BriefResultsProps = {
   articles: Article[];
@@ -10,24 +15,23 @@ type BriefResultsProps = {
 const BriefResults = ({ articles }: BriefResultsProps) => {
   const [bookmarkLinks, setBookmarkLinks] = useState<Set<string>>(new Set());
   const [readLinks, setReadLinks] = useState<Set<string>>(new Set());
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, "up" | "down" | undefined>>({});
 
   useEffect(() => {
-    setBookmarkLinks(new Set());
-    setReadLinks(new Set());
-
     const bookmarks = new Set<string>();
     const readArticles = new Set<string>();
+    const feedback: Record<string, "up" | "down" | undefined> = {};
+
     for (const article of articles) {
       const { link } = article;
-      if (isBookmarked(link)) {
-        bookmarks.add(link);
-      }
-      if (isRead(link)) {
-        readArticles.add(link)
-      }
+      if (isBookmarked(link)) bookmarks.add(link);
+      if (isRead(link)) readArticles.add(link);
+      feedback[link] = getArticleFeedback(link);
     }
+
     setBookmarkLinks(bookmarks);
     setReadLinks(readArticles);
+    setFeedbackMap(feedback);
   }, [articles]);
 
   if (!articles.length) {
@@ -44,7 +48,7 @@ const BriefResults = ({ articles }: BriefResultsProps) => {
 
       <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {articles.map((article, idx) => {
-          const text = article.summary ?? article.description ?? "No summary available.";
+          const descriptionText = article.summary ?? article.description ?? "No summary available.";
           const bookmarked = bookmarkLinks.has(article.link);
           const read = readLinks.has(article.link);
 
@@ -60,65 +64,36 @@ const BriefResults = ({ articles }: BriefResultsProps) => {
                 }}
               >
                 <div className="small" style={{ marginBottom: 6 }}>
-                  {article.sourceName}
-                  {article.publishedAt ? (
-                    <span className="small"> • {new Date(article.publishedAt).toLocaleDateString()}</span>
-                  ) : null}
-                  {read ? (
-                    <span
-                      style={{
-                        marginLeft: 8,
-                        padding: "2xp 8px",
-                        borderRadius: 999,
-                        border: "1px solid var(--border)",
-                        fontSize: 11,
-                      }}
-                    >
-                      Read
-                    </span>
-                  ) : null}
+                  <ArticleMetaData
+                    sourceName={article.sourceName}
+                    publishedAt={article.publishedAt}
+                    read={read}
+                  />
+
+                  <ArticleFeedback
+                    article={article}
+                    value={feedbackMap[article.link]}
+                    onChange={next => {
+                      setFeedbackMap(prev => ({
+                        ...prev,
+                        [article.link]: next
+                      }));
+                    }}
+                  />
                 </div>
-                <button
-                  onClick={() => {
-                    const next = toggleBookmark(article);
-                    setBookmarkLinks(new Set(next.map(b => b.link)));
-                  }}
-                  title={bookmarked ? "Remove bookmark" : "Save to bookmarks"}
-                  style={{
-                    border: "1px solid var(--border)",
-                    background: "transparent",
-                    borderRadius: 10,
-                    padding: "4px 8px",
-                    cursor: "pointer",
-                    color: "var(--text)",
-                    flexShrink: 0,
-                  }}
-                >
-                  {bookmarked ? "★" : "☆"}
-                </button>
+
+                <BookmarkButton
+                  article={article}
+                  bookmarked={bookmarked}
+                  onChange={links => setBookmarkLinks(links)}
+                />
               </div>
 
-              <a
-                href={article.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => {
-                  const next = markAsRead(article);
-                  setReadLinks(new Set(next.map(h => h.link)));
-                }}
-                style={{
-                  fontSize: 18,
-                  fontWeight: 650,
-                  textDecoration: "none",
-                  color: "inherit",
-                }}
-              >
-                {article.title}
-              </a>
-
-              <p className="small" style={{ marginTop: 10, marginBottom: 0, lineHeight: 1.45 }}>
-                {text}
-              </p>
+              <ArticleContent
+                article={article}
+                descriptionText={descriptionText}
+                onRead={links => setReadLinks(links)}
+              />
             </li>
           );
         })}
