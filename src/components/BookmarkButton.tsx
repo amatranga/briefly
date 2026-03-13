@@ -12,12 +12,13 @@ type BookmarkButtonProps = {
 
 const BookmarkButton = ({ article, bookmarked, onChange }: BookmarkButtonProps) => {
   const handleClick = () => {
-    const next = toggleBookmark(article);
+    const result = toggleBookmark(article);
 
-    // reinforce relevance signal
-    applyArticleSignal(article, "medium");
+    if (result.action === "added") {
+      applyArticleSignal(article, "medium");
+    }
 
-    onChange(new Set(next.map(b => b.link)));
+    onChange(new Set(result.items.map(b => b.link)));
   };
 
   return (
