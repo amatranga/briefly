@@ -9,11 +9,12 @@ import { BriefLogView } from '@/components/BriefLogView';
 import { BriefView } from '@/components/BriefView';
 import { TopicWeightsEditor } from '@/components/TopicWeightsEditor';
 import { TOPICS, VIEWS } from '@/lib/types';
-import type { CacheStatus, Topic, View, TopicWeights } from '@/lib/types';
+import type { CacheStatus, Topic, View, TopicWeights, UserPreferences } from '@/lib/types';
 import { loadJSON, saveJSON } from '@/lib/storage';
 import { saveBriefSnapshot } from '@/lib/brief';
 import { DEFAULT_TOPIC_WEIGHTS } from '@/lib/sources';
-import { getUserPreferences } from '@/lib/preferences';
+import { getUserPreferences, resetUserPreferences } from '@/lib/preferences';
+import { LearnedTopicAffinities } from '@/components/LearnedTopicAffinities';
 
 const articleLimit = 5;
 const DEFAULT_TOPICS: Topic[] = ["business"];
@@ -49,6 +50,7 @@ const HomePage = () => {
   const [view, setView] = useState<View>("brief");
   const [showSettings, setShowSettings] = useState(false);
   const [topicWeights, setTopicWeights] = useState<TopicWeights>(DEFAULT_TOPIC_WEIGHTS);
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
 
   useEffect(() => {
     const urlTopics = searchParams.get("topics");
@@ -69,6 +71,8 @@ const HomePage = () => {
     }
 
     if (savedWeights) setTopicWeights(savedWeights);
+
+    setUserPreferences(getUserPreferences());
   }, []);
 
   // Set topics and limit in local storage on update
@@ -91,6 +95,12 @@ const HomePage = () => {
     const topicsParam = topics.slice().sort().join(",");
     router.replace(`/?topics=${encodeURIComponent(topicsParam)}&limit=${limit}`);
   }, [topics, limit, router]);
+
+  useEffect(() => {
+    if (showSettings) {
+      setUserPreferences(getUserPreferences());
+    }
+  }, [showSettings]);
 
   const generateBrief = async (force = false) => {
     setLoading(true);
@@ -202,11 +212,35 @@ const HomePage = () => {
           </button>
         
           {showSettings && (
-            <TopicWeightsEditor
-              topics={topics}
-              weights={topicWeights}
-              onChange={setTopicWeights}
-            />
+            <div className="card" style={{ marginTop: 12, padding: "16 "}}>
+              <h3 style={{ marginTop: 0, marginBottom: 8 }}>Settings</h3>
+              <TopicWeightsEditor
+                topics={topics}
+                weights={topicWeights}
+                onChange={setTopicWeights}
+              />
+
+              {userPreferences && (
+                <>
+                  <LearnedTopicAffinities preferences={userPreferences} />
+
+                  <button
+                    onClick={() => setUserPreferences(resetUserPreferences())}
+                    style={{
+                      marginTop: 12,
+                      border: "1px solid var(--border)",
+                      background: "transparent",
+                      borderRadius: 8,
+                      padding: "6px 10px",
+                      cursor: "pointer",
+                      color: "var(--text)",
+                    }}
+                  >
+                    Reset Personalization
+                  </button>
+                </>
+              )}
+            </div>
           )}
         </div>
 

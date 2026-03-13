@@ -113,6 +113,23 @@ const getArticleFeedback = (articleLink: string): FeedbackValue | undefined => {
   return getUserPreferences().articleFeedback[articleLink];
 };
 
+const resetUserPreferences = (): UserPreferences => {
+  const reset: UserPreferences = {
+    topicAffinity: {
+      business: 0,
+      tech: 0,
+      markets: 0,
+      sports: 0,
+      entertainment: 0,
+    },
+    keywordAffinity: {},
+    articleFeedback: {},
+  };
+
+  saveUserPreferences(reset);
+  return reset;
+}
+
 export {
   getUserPreferences,
   saveUserPreferences,
@@ -120,4 +137,5 @@ export {
   setArticleFeedback,
   clearArticleFeedback,
   getArticleFeedback,
+  resetUserPreferences,
 };
