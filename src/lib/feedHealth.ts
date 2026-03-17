@@ -46,4 +46,8 @@ const getFeedHealth = (): FeedHealth[] => (
   ))
 );
 
-export { updateFeedFailure, updateFeedSuccess, getFeedHealth };
+const clearFeedHealth = (): void => {
+  feedHealthMap.clear();
+};
+
+export { updateFeedFailure, updateFeedSuccess, getFeedHealth, clearFeedHealth };
