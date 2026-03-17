@@ -7,14 +7,15 @@ import { BookmarksView } from '@/components/BookmarksView';
 import { HistoryView } from '@/components/HistoryView';
 import { BriefLogView } from '@/components/BriefLogView';
 import { BriefView } from '@/components/BriefView';
-import { TopicWeightsEditor } from '@/components/TopicWeightsEditor';
-import { TOPICS, VIEWS } from '@/lib/types';
+import { Header } from '@/components/Header';
+import { ViewSelector } from '@/components/ViewSelector';
+import { SettingsPanel } from '@/components/SettingsPanel';
+import { TOPICS } from '@/lib/types';
 import type { CacheStatus, Topic, View, TopicWeights, UserPreferences } from '@/lib/types';
 import { loadJSON, saveJSON } from '@/lib/storage';
 import { saveBriefSnapshot } from '@/lib/brief';
 import { DEFAULT_TOPIC_WEIGHTS } from '@/lib/sources';
 import { getUserPreferences, resetUserPreferences } from '@/lib/preferences';
-import { LearnedTopicAffinities } from '@/components/LearnedTopicAffinities';
 
 const articleLimit = 5;
 const DEFAULT_TOPICS: Topic[] = ["business"];
@@ -144,106 +145,29 @@ const HomePage = () => {
     <main className="container">
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 4,
-          }}
-        >
-          <h1 style={{ margin: 0 }}>Briefly</h1>
+        <Header
+          theme={theme}
+          onToggleTheme={() =>
+            setTheme(theme === "light" ? "dark" : "light")
+          }
+        />
 
-          <button
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            style={{
-              border: "1px solid var(--border)",
-              background: "transparent",
-              borderRadius: 8,
-              padding: "6px 10px",
-              cursor: "pointer",
-              color: "var(--text)",
-            }}
-          >
-            {theme === "light" ? "🌙" : "☀️"}
-          </button>
-        </div>
-
-        <p className="small" style={{ marginTop: 6 }}>
-          Pick topics and generate a quick daily brief.
-        </p>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-          {VIEWS.map(v => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              style={{
-                border: "1px solid var(--border)",
-                background: view === v ? "var(--card)" : "transparent",
-                borderRadius: 999,
-                padding: "6px 10px",
-                cursor: "pointer",
-                color: "var(--text)",
-                fontWeight: view === v ? 700 : 500,
-              }}
-            >
-              {v.charAt(0).toUpperCase() + v.slice(1)}
-            </button>
-          ))}
-        </div>
-
+        <ViewSelector
+          view={view}
+          onChange={setView}
+        />
         
         <TopicSelector value={topics} onChange={setTopics} />
 
-        <div style={{ marginTop: 12, marginBottom: 16 }}>
-          <button
-            onClick={() => setShowSettings(prev => !prev)}
-            style={{
-              border: "1px solid var(--border)",
-              background: "transparent",
-              borderRadius: 10,
-              padding: "6px 10px",
-              cursor: "pointer",
-              color: "var(--text)",
-            }}
-          >
-            {showSettings ? "Hide Settings" : "Show Settings"}
-          </button>
-        
-          {showSettings && (
-            <div className="card" style={{ marginTop: 12, padding: "16 "}}>
-              <h3 style={{ marginTop: 0, marginBottom: 8 }}>Settings</h3>
-              <TopicWeightsEditor
-                topics={topics}
-                weights={topicWeights}
-                onChange={setTopicWeights}
-              />
-
-              {userPreferences && (
-                <>
-                  <LearnedTopicAffinities preferences={userPreferences} />
-
-                  <button
-                    onClick={() => setUserPreferences(resetUserPreferences())}
-                    style={{
-                      marginTop: 12,
-                      border: "1px solid var(--border)",
-                      background: "transparent",
-                      borderRadius: 8,
-                      padding: "6px 10px",
-                      cursor: "pointer",
-                      color: "var(--text)",
-                    }}
-                  >
-                    Reset Personalization
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
+        <SettingsPanel
+          showSettings={showSettings}
+          onToggle={() => setShowSettings(prev => !prev)}
+          topics={topics}
+          topicWeights={topicWeights}
+          onTopicWeightsChange={setTopicWeights}
+          userPreferences={userPreferences}
+          onResetPersonalization={() => setUserPreferences(resetUserPreferences())}
+        />
 
         {view === "brief" && (
           <BriefView
