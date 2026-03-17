@@ -13,8 +13,8 @@ const formatAffinity = (value: number): string => {
 };
 
 const getAffinityColor = (value: number): string => {
-  if (value > 0) return "16a34a";
-  if (value < 0) return "dc2626";
+  if (value > 0) return "#16a34a";
+  if (value < 0) return "#dc2626";
   return "var(--muted)";
 };
 
