@@ -9,7 +9,14 @@ import { TOPICS, KEYWORDS } from "@/lib/types";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/lib/storage";
 import { normalizeText } from "@/lib/helpers";
 
-const DEFAULT_PREFERENCES: UserPreferences = {
+const SIGNAL_WEIGHTS: Record<ArticleSignalStrength, number> = {
+  weak: 0.25,
+  medium: 0.75,
+  strong: 1.5,
+  negative: -1.25,
+};
+
+const makeDefaultPreferences = (): UserPreferences => ({
   topicAffinity: {
     business: 0,
     tech: 0,
@@ -19,17 +26,10 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   },
   keywordAffinity: {},
   articleFeedback: {},
-};
-
-const SIGNAL_WEIGHTS: Record<ArticleSignalStrength, number> = {
-  weak: 0.25,
-  medium: 0.75,
-  strong: 1.5,
-  negative: -1.25,
-};
+});
 
 const getUserPreferences = (): UserPreferences => (
-  loadJSON<UserPreferences>(STORAGE_KEYS.userPreferences, DEFAULT_PREFERENCES)
+  loadJSON<UserPreferences>(STORAGE_KEYS.userPreferences, makeDefaultPreferences())
 );
 
 const saveUserPreferences = (preferences: UserPreferences) => {
