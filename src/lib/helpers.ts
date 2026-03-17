@@ -56,4 +56,4 @@ const cleanText = (text: string) => (
   )
 );
 
-export { normalizeText, cleanText };
+export { normalizeText, cleanText, normalizeWhitespace };
