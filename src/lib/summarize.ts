@@ -1,14 +1,11 @@
 import OpenAI from "openai";
-
-const cleanHtml = (html: string): string | null => (
-  html.replace(/<[^>]+>/g, "").trim()
-)
+import { cleanText } from "@/lib/helpers";
 
 const summarizeFromDescription = (description?: string): string => {
   if (!description) return "No summary available.";
 
-  // light cleanup: strip HTML tags and add optional elipsis
-  const text = cleanHtml(description)
+  // light cleanup: strip HTML tags and add optional ellipsis
+  const text = cleanText(description)
   return text.length > 240 ? text.slice(0, 237) + "..." : text;
 }
 
@@ -22,7 +19,7 @@ const summarizeWithAi = async (input: string): Promise<string | null> => {
   const client = getClient();
   if (!client) return null;
 
-  const cleaned = cleanHtml(input);
+  const cleaned = cleanText(input);
   if (!cleaned) return null;
 
   const resp = await client.chat.completions.create({
