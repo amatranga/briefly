@@ -9,11 +9,14 @@ const isBookmarked = (link: string): boolean => (
   getBookmarks().some(bookmark => bookmark.link === link)
 );
 
-const toggleBookmark = (article: Article): BookmarkItem[] => {
+const toggleBookmark = (article: Article): {
+  items: BookmarkItem[],
+  action: "added" | "removed",
+} => {
   const current = getBookmarks();
   const exists = current.some(bookmark => bookmark.link === article.link);
 
-  const next = exists
+  const items = exists
     ? current.filter(bookmark => bookmark.link !== article.link)
     : [
       {
@@ -28,8 +31,11 @@ const toggleBookmark = (article: Article): BookmarkItem[] => {
       ...current,
     ];
 
-  saveJSON(STORAGE_KEYS.bookmarks, next);
-  return next;
+  saveJSON(STORAGE_KEYS.bookmarks, items);
+  return {
+    items,
+    action: exists ? "removed": "added",
+  };
 };
 
 const removeBookmark = (link: string): BookmarkItem[] => {

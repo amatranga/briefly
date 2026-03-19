@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
-import type { Article } from "./types";
+import type { Article } from "@/lib/types";
+import { cleanText } from "@/lib/helpers";
 
 const parser = new XMLParser({ ignoreAttributes: false });
 
@@ -15,10 +16,10 @@ const fetchRssArticles = async (sourceId: string, sourceName: string, url: strin
   const normalized = (Array.isArray(items) ? items : [items]).map((item: any) => ({
     sourceId,
     sourceName,
-    title: item?.title ?? "",
+    title: cleanText(item?.title ?? ""),
     link: item?.link ?? "",
     publishedAt: item?.pubDate ?? item?.published ?? undefined,
-    description: item?.description ?? item?.summary ?? undefined,
+    description: cleanText(item?.description ?? item?.summary ?? undefined),
   }));
 
   return normalized.filter(article => article.title && article.link);

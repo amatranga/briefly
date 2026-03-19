@@ -10,7 +10,7 @@ export class MemoryCache<T> {
   getEntry(key: string): CacheEntry<T> | null {
     const entry = this.store.get(key);
     if (!entry) return null;
-    if (Date.now() > entry.expiresAt) {
+    if (Date.now() >= entry.expiresAt) {
       this.store.delete(key);
       return null;
     }

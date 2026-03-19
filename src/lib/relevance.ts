@@ -1,16 +1,6 @@
-import type { Topic, Article, TopicWeights } from "@/lib/types";
-
-const KEYWORDS: Record<Topic, string[]> = {
-  business: ["startup", "revenue", "merger", "acquisition", "earnings", "ceo", "layoff", "funding"],
-  tech: ["ai", "software", "openai", "apple", "google", "microsoft", "security", "cloud", "saas"],
-  markets: ["stocks", "s&p", "nasdaq", "dow", "inflation", "fed", "rates", "yield", "crypto"],
-  sports: ["nba", "nfl", "mlb", "nhl", "score", "playoffs", "trade", "coach"],
-  entertainment: ["movie", "tv", "netflix", "music", "album", "tour", "box office", "celebrity"],
-};
-
-const normalizeText = (text: string): string => (
-  text.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim()
-);
+import type { Topic, Article, TopicWeights, UserPreferences } from "@/lib/types";
+import { KEYWORDS } from "@/lib/types";
+import { normalizeText } from "@/lib/helpers";
 
 const countOccurrences = (text: string, keyword: string): number => {
   const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -46,6 +36,7 @@ const scoreArticle = (
   topicWeights: TopicWeights,
   documentFrequency: Map<string, number>,
   corpusSize: number,
+  userPreferences: UserPreferences,
 ): number => {
   const title = normalizeText(article.title);
   const description = normalizeText(article.description ?? "");
@@ -54,6 +45,7 @@ const scoreArticle = (
 
   for (const topic of selectedTopics) {
     const topicWeight = topicWeights[topic] ?? 1;
+    const learnedTopicBoost = userPreferences?.topicAffinity?.[topic] ?? 0;
 
     for (const keyword of KEYWORDS[topic]) {
       const titleHits = countOccurrences(title, keyword);
@@ -63,11 +55,18 @@ const scoreArticle = (
 
       const df = documentFrequency.get(keyword) ?? 1;
       const idf = Math.log((corpusSize + 1) / (df + 1)) + 1;
+      const keywordBoost = userPreferences?.keywordAffinity?.[keyword] ?? 0;
 
-      score += titleHits * 3 * idf;
+      score += titleHits * 3 * topicWeight * idf;
       score += bodyHits * 1 * topicWeight * idf;
+      score += learnedTopicBoost;
+      score += keywordBoost;
     }
   }
+
+  const explicitFeedback = userPreferences?.articleFeedback?.[article.link];
+  if (explicitFeedback === "up") score += 5;
+  if (explicitFeedback === "down") score -= 5;
 
   return score;
 }
@@ -76,6 +75,7 @@ const rankArticles = (
   articles: Article[],
   selectedTopics: Topic[],
   topicWeights: TopicWeights,
+  userPreferences: UserPreferences,
 ): Article[] => {
   const corpusSize = articles.length || 1;
   const documentFrequency = computeDocumentFrequency(articles, selectedTopics);
@@ -87,6 +87,7 @@ const rankArticles = (
       topicWeights,
       documentFrequency,
       corpusSize,
+      userPreferences,
     );
 
     const scoreB = scoreArticle(
@@ -95,6 +96,7 @@ const rankArticles = (
       topicWeights,
       documentFrequency,
       corpusSize,
+      userPreferences,
     );
 
     if (scoreB !== scoreA) return scoreB - scoreA;

@@ -23,39 +23,45 @@ const TopicWeightsEditor = ({
   };
 
   return (
-    <div style={{ marginTop: 12, marginBottom: 16 }}>
-      <h3 style={{ marginBottom: 8 }}>Ranking Priority</h3>
+    <>
+      <p className="small" style={{ marginTop: 0 }}>
+        Adjust topic priority to influence how articles are ranked.
+      </p>
+      
+      <div style={{ marginTop: 12, marginBottom: 16 }}>
+        <h3 style={{ marginBottom: 8 }}>Ranking Priority</h3>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "140px minmax(180px, 260px) 32px",
-          gap: "10px 16px",
-          alignItems: "center",
-        }}
-      >
-        {topics.map((topic) => (
-          <label
-            key={topic}
-            style={{ display: "contents" }}
-          >
-            <span style={{ textTransform: "capitalize" }}>{topic}</span>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "140px minmax(180px, 260px) 32px",
+            gap: "10px 16px",
+            alignItems: "center",
+          }}
+        >
+          {topics.map((topic) => (
+            <label
+              key={topic}
+              style={{ display: "contents" }}
+            >
+              <span style={{ textTransform: "capitalize" }}>{topic}</span>
 
-            <input
-              type="range"
-              min={1}
-              max={5}
-              step={1}
-              value={weights[topic]}
-              onChange={(e) => updateWeight(topic, Number(e.target.value))}
-              style={{ width: "100%" }}
-            />
+              <input
+                type="range"
+                min={1}
+                max={5}
+                step={1}
+                value={weights[topic]}
+                onChange={(e) => updateWeight(topic, Number(e.target.value))}
+                style={{ width: "100%" }}
+              />
 
-            <span style={{ textAlign: "right" }}>{weights[topic]}</span>
-          </label>
-        ))}
+              <span style={{ textAlign: "right" }}>{weights[topic]}</span>
+            </label>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
