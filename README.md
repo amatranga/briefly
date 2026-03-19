@@ -39,6 +39,11 @@ The project focuses on performance, caching strategies, and simple NLP technique
 - Article deduplication
 - Feed health monitoring
 
+### v1.4
+- Enhanced personalization and feedback
+- Settings and ranking controls
+- Comprehensive test coverage
+
 ## Tech Stack
 
 ### Frontend
@@ -147,10 +152,7 @@ Each topic maps to one or more RSS feeds.
 
 ## Future Enhancements
 Planned improvements include:
-- Improved NLP relevance scoring
 - Additional RSS sources
-- Article deduplication
-- Deployment with persistent caching
 
 
 ## Version
@@ -205,6 +207,20 @@ v1.3 introduces smarter article ranking and improved reliability monitoring.
 
 - Improved Ranking Controls
   - Users can now adjust **Topic Priority** to influence how strongly articles from selected topics are ranked.
+
+**v1.4**
+
+v1.4 introduces enhanced personalization and comprehensive test coverage
+
+- Enhanced Personalization
+  - Learned Topic Affinities
+    - Tracks user preferences over time
+    - Driven by clicks, bookmarks, explicit article feedback
+
+- Comprehensive Test Coverage
+  - Tests implemented for all components, views, and page orchestration
+  - Coverage includes rendering, user interaction, state updates, side effects, async flows
+  
 
 
 ## Author
