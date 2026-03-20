@@ -1,11 +1,9 @@
 import { z } from "zod";
 import { TOPICS } from "@/lib/types";
 
-const BriefRequestSchema = z.object({
-  topics: z.array(z.enum(TOPICS)).min(1).max(5),
-  limit: z.number().int().min(1).max(10).default(5),
-  force: z.boolean().optional().default(false),
-  topicWeights: z
+const TopicEnum = z.enum(TOPICS);
+
+const topicWeights = z
     .object({
       business: z.number().int().min(1).max(5),
       tech: z.number().int().min(1).max(5),
@@ -13,8 +11,9 @@ const BriefRequestSchema = z.object({
       sports: z.number().int().min(1).max(5),
       entertainment: z.number().int().min(1).max(5),
     })
-    .optional(),
-  userPreferences: z
+    .optional();
+
+const userPreferences = z
     .object({
       topicAffinity: z.object({
         business: z.number(),
@@ -26,10 +25,27 @@ const BriefRequestSchema = z.object({
       keywordAffinity: z.record(z.string(), z.number()),
       articleFeedback: z.record(z.string(), z.enum(["up", "down"])),
     })
-    .optional(),
+    .optional();
+
+const limit = z.number().int().min(1).max(10).default(5);
+
+const BriefRequestSchema = z.object({
+  topics: z.array(TopicEnum).min(1).max(5),
+  limit,
+  force: z.boolean().optional().default(false),
+  topicWeights,
+  userPreferences,
+});
+
+const FeedRequestSchema = z.object({
+  topics: z.array(TopicEnum).min(1),
+  limit,
+  offset: z.number().int().min(0).optional().default(0),
+  topicWeights,
+  userPreferences,
 });
 
 type BriefRequest = z.infer<typeof BriefRequestSchema>;
 
-export { BriefRequestSchema };
+export { BriefRequestSchema, FeedRequestSchema };
 export type { BriefRequest };

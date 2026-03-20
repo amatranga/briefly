@@ -1,40 +1,31 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { TopicSelector } from '@/components/TopicSelector';
-import { BookmarksView } from '@/components/BookmarksView';
-import { HistoryView } from '@/components/HistoryView';
-import { BriefLogView } from '@/components/BriefLogView';
-import { BriefView } from '@/components/BriefView';
-import { Header } from '@/components/Header';
-import { ViewSelector } from '@/components/ViewSelector';
-import { SettingsPanel } from '@/components/SettingsPanel';
-import { TOPICS } from '@/lib/types';
-import type { CacheStatus, Topic, View, TopicWeights, UserPreferences } from '@/lib/types';
-import { loadJSON, saveJSON } from '@/lib/storage';
-import { saveBriefSnapshot } from '@/lib/brief';
-import { DEFAULT_TOPIC_WEIGHTS } from '@/lib/sources';
-import { getUserPreferences, resetUserPreferences } from '@/lib/preferences';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { TopicSelector } from "@/components/TopicSelector";
+import { BookmarksView } from "@/components/BookmarksView";
+import { HistoryView } from "@/components/HistoryView";
+import { BriefLogView } from "@/components/BriefLogView";
+import { BriefView } from "@/components/BriefView";
+import { FeedView } from "@/components/FeedView";
+import { Header } from "@/components/Header";
+import { ViewSelector } from "@/components/ViewSelector";
+import { SettingsPanel } from "@/components/SettingsPanel";
+import type {
+  Article,
+  CacheStatus,
+  Topic,
+  TopicWeights,
+  UserPreferences,
+  View,
+} from "@/lib/types";
+import { loadJSON, saveJSON } from "@/lib/storage";
+import { saveBriefSnapshot } from "@/lib/brief";
+import { DEFAULT_TOPIC_WEIGHTS } from "@/lib/sources";
+import { getUserPreferences, resetUserPreferences } from "@/lib/preferences";
+import { parseTopics, parseLimit, dedupeArticlesByLink } from "@/lib/helpers";
 
-const articleLimit = 5;
-const DEFAULT_TOPICS: Topic[] = ["business"];
-
-const parseTopics = (param: string | null): Topic[] => {
-  if (!param) return DEFAULT_TOPICS;
-  const allowed = new Set(TOPICS);
-  const parsed = param
-    .split(",")
-    .map(p => p.trim())
-    .filter((t): t is Topic => allowed.has(t as Topic));
-
-  return parsed.length ? parsed : DEFAULT_TOPICS;
-}
-
-const parseLimit = (param: string | null): number => {
-  const n = Number(param);
-  return Number.isFinite(n) && n >= 1 && n <= 10 ? n : articleLimit;
-}
+const feedPageSize = 10;
 
 const HomePage = () => {
   const router = useRouter();
@@ -43,15 +34,29 @@ const HomePage = () => {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [topics, setTopics] = useState<Topic[]>(() => parseTopics(searchParams.get("topics")));
   const [limit, setLimit] = useState<number>(() => parseLimit(searchParams.get("limit")));
-  const [articles, setArticles] = useState<any[]>([]);
+
+  const [briefArticles, setBriefArticles] = useState<Article[]>([]);
+  const [feedArticles, setFeedArticles] = useState<Article[]>([]);
+
   const [loading, setLoading] = useState(false);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedLoadingMore, setFeedLoadingMore] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
+  const [feedError, setFeedError] = useState<string | null>(null);
+
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [cache, setCache] = useState<CacheStatus>(null);
+
   const [view, setView] = useState<View>("brief");
   const [showSettings, setShowSettings] = useState(false);
   const [topicWeights, setTopicWeights] = useState<TopicWeights>(DEFAULT_TOPIC_WEIGHTS);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
+
+  const [feedOffset, setFeedOffset] = useState(0);
+  const [feedHasMore, setFeedHasMore] = useState(true);
+
+  const didBootstrapRef = useRef(false);
 
   useEffect(() => {
     const urlTopics = searchParams.get("topics");
@@ -74,24 +79,20 @@ const HomePage = () => {
     if (savedWeights) setTopicWeights(savedWeights);
 
     setUserPreferences(getUserPreferences());
-  }, []);
+  }, [searchParams]);
 
-  // Set topics and limit in local storage on update
   useEffect(() => saveJSON("briefly:topics", topics.join(",")), [topics]);
   useEffect(() => saveJSON("briefly:limit", String(limit)), [limit]);
 
-  // Set theme in local storage on update
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     saveJSON("briefly:theme", theme);
   }, [theme]);
 
-  // Set topic weightsin local storage on update
   useEffect(() => {
     saveJSON("briefly:topicWeights", topicWeights);
   }, [topicWeights]);
 
-  // When topics and limits change, update the URL
   useEffect(() => {
     const topicsParam = topics.slice().sort().join(",");
     router.replace(`/?topics=${encodeURIComponent(topicsParam)}&limit=${limit}`);
@@ -103,7 +104,7 @@ const HomePage = () => {
     }
   }, [showSettings]);
 
-  const generateBrief = async (force = false) => {
+  const generateBrief = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
 
@@ -121,42 +122,114 @@ const HomePage = () => {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Request failed");
-      setArticles(data.items ?? []);
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Request failed");
+      }
+
+      const nextItems = (data.items ?? []) as Article[];
+
+      setBriefArticles(nextItems);
       setLastUpdated(data.lastUpdated ?? null);
       setCache(data.cache ?? null);
 
-      // v1.2: save snapshot
       saveBriefSnapshot({
         topics,
         limit,
-        items: data.items ?? [],
+        items: nextItems,
         cache: data.cache ?? null,
         errors: data.errors ?? [],
       });
     } catch (e: any) {
-      setError(e.message ?? "Something went wrong");
+      setError(e?.message ?? "Something went wrong");
     } finally {
       setLoading(false);
     }
-  }
+  }, [topics, limit, topicWeights]);
+
+  const loadFeedPage = useCallback(
+    async ({ reset = false }: { reset?: boolean } = {}) => {
+      if (reset) {
+        setFeedLoading(true);
+      } else {
+        setFeedLoadingMore(true);
+      }
+
+      setFeedError(null);
+
+      try {
+        const res = await fetch("/api/feed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topics,
+            limit: feedPageSize,
+            offset: reset ? 0 : feedOffset,
+            topicWeights,
+            userPreferences: getUserPreferences(),
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data?.error ?? "Feed request failed");
+        }
+
+        const nextItems = (data.items ?? []) as Article[];
+
+        if (reset) {
+          setFeedArticles(dedupeArticlesByLink(nextItems));
+          setFeedOffset(nextItems.length);
+        } else {
+          setFeedArticles(prev => {
+            const merged = dedupeArticlesByLink([...prev, ...nextItems]);
+            setFeedOffset(merged.length);
+            return merged;
+          });
+        }
+
+        if (typeof data.hasMore === "boolean") {
+          setFeedHasMore(data.hasMore);
+        } else {
+          setFeedHasMore(nextItems.length === feedPageSize);
+        }
+      } catch (e: any) {
+        setFeedError(e?.message ?? "Something went wrong");
+      } finally {
+        setFeedLoading(false);
+        setFeedLoadingMore(false);
+      }
+    },
+    [topics, feedOffset, topicWeights]
+  );
+
+  useEffect(() => {
+    if (didBootstrapRef.current) return;
+    didBootstrapRef.current = true;
+
+    void generateBrief(false);
+    void loadFeedPage({ reset: true });
+  }, [generateBrief, loadFeedPage]);
+
+  useEffect(() => {
+    if (!didBootstrapRef.current) return;
+
+    setFeedOffset(0);
+    setFeedHasMore(true);
+    void loadFeedPage({ reset: true });
+  }, [topics, topicWeights, loadFeedPage]);
 
   return (
     <main className="container">
-
       <div className="card" style={{ marginBottom: 16 }}>
         <Header
           theme={theme}
-          onToggleTheme={() =>
-            setTheme(theme === "light" ? "dark" : "light")
-          }
+          onToggleTheme={() => setTheme(theme === "light" ? "dark" : "light")}
         />
 
-        <ViewSelector
-          view={view}
-          onChange={setView}
-        />
-        
+        <ViewSelector view={view} onChange={setView} />
+
         <TopicSelector value={topics} onChange={setTopics} />
 
         <SettingsPanel
@@ -172,7 +245,7 @@ const HomePage = () => {
         {view === "brief" && (
           <BriefView
             topicsCount={topics.length}
-            articles={articles}
+            articles={briefArticles}
             loading={loading}
             error={error}
             lastUpdated={lastUpdated}
@@ -181,22 +254,39 @@ const HomePage = () => {
             onRegenerate={() => generateBrief(true)}
           />
         )}
+
+        {view === "feed" && (
+          <FeedView
+            articles={feedArticles}
+            loading={feedLoading}
+            loadingMore={feedLoadingMore}
+            error={feedError}
+            hasMore={feedHasMore} 
+            onLoadMore={() => {
+              if (!feedLoading && !feedLoadingMore && feedHasMore) {
+                void loadFeedPage();
+              }
+            }}
+          />
+        )}
+
         {view === "bookmarks" && <BookmarksView />}
         {view === "history" && <HistoryView />}
+
         {view === "briefs" && (
-          <BriefLogView onLoadBrief={snapshot => {
-            setArticles(snapshot.items);
-            setLastUpdated(snapshot.generatedAt);
-            setCache(snapshot.cache ?? null);
-            setLimit(snapshot.limit);
-            setView("brief");
+          <BriefLogView
+            onLoadBrief={snapshot => {
+              setBriefArticles(snapshot.items);
+              setLastUpdated(snapshot.generatedAt);
+              setCache(snapshot.cache ?? null);
+              setLimit(snapshot.limit);
+              setView("brief");
             }}
           />
         )}
       </div>
-
     </main>
   );
-}
+};
 
 export default HomePage;

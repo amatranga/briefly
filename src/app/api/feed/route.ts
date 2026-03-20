@@ -1,30 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BriefRequestSchema } from "@/lib/validate";
+import { FeedRequestSchema } from "@/lib/validate";
 import { summarizeFromDescription, summarizeWithAi } from "@/lib/summarize";
 import { MemoryCache } from "@/lib/cache";
-import { mapWithConcurrency, ENABLE_AI } from "@/app/api/helpers";
 import { collectRankedArticles, CACHE_TTL_MS } from "@/lib/articlePipeline";
+import { mapWithConcurrency, ENABLE_AI } from "@/app/api/helpers";
 
-const briefCache = new MemoryCache<any>();
+const feedCache = new MemoryCache<any>();
 
 const POST = async (req: NextRequest) => {
   try {
     const body = await req.json();
-    const parsed = BriefRequestSchema.parse(body);
+    const parsed = FeedRequestSchema.parse(body);
 
     const sortedTopics = [...parsed.topics].sort();
-    const briefCacheKey = `brief:topics=${sortedTopics.join(",")}:limit=${parsed.limit}:ai=${ENABLE_AI}`;
+    const feedCacheKey = `feed:topics=${sortedTopics.join(",")}:limit=${parsed.limit}:offset=${parsed.offset}:ai=${ENABLE_AI}`;
 
-    if (!parsed.force) {
-      const cachedBriefEntry = briefCache.getEntry?.(briefCacheKey);
-
-      if (cachedBriefEntry) {
-        return NextResponse.json({
-          ...cachedBriefEntry.value,
-          lastUpdated: new Date(cachedBriefEntry.createdAt).toISOString(),
-          cache: "hit",
-        });
-      }
+    const cachedFeedEntry = feedCache.getEntry?.(feedCacheKey);
+    if (cachedFeedEntry) {
+      return NextResponse.json({
+        ...cachedFeedEntry.value,
+        lastUpdated: new Date(cachedFeedEntry.createdAt).toISOString(),
+        cache: "hit",
+      });
     }
 
     const { articles: rankedArticles, errors } = await collectRankedArticles({
@@ -33,9 +30,9 @@ const POST = async (req: NextRequest) => {
       userPreferences: parsed.userPreferences,
     });
 
-    const limited = rankedArticles.slice(0, parsed.limit);
+    const paged = rankedArticles.slice(parsed.offset, parsed.offset + parsed.limit);
 
-    const items = await mapWithConcurrency(limited, 3, async (article) => {
+    const items = await mapWithConcurrency(paged, 3, async (article) => {
       const fallback = summarizeFromDescription(article.description);
 
       if (!ENABLE_AI) {
@@ -47,11 +44,16 @@ const POST = async (req: NextRequest) => {
       return { ...article, summary: ai ?? fallback };
     });
 
-    const payload = { items, errors };
+    const hasMore = parsed.offset + parsed.limit < rankedArticles.length;
 
-    if (!parsed.force) {
-      briefCache.set(briefCacheKey, payload, CACHE_TTL_MS);
-    }
+    const payload = {
+      items,
+      errors,
+      hasMore,
+      nextOffset: parsed.offset + items.length,
+    };
+
+    feedCache.set(feedCacheKey, payload, CACHE_TTL_MS);
 
     return NextResponse.json({
       ...payload,

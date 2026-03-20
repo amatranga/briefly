@@ -2,13 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Article } from "@/lib/types";
-import { isBookmarked } from "@/lib/bookmark";
-import { isRead } from "@/lib/history";
-import { getArticleFeedback } from "@/lib/preferences";
-import { ArticleFeedback } from "@/components/ArticleFeedback";
-import { ArticleMetaData } from "@/components/ArticleMetaData";
-import { BookmarkButton } from "@/components/BookmarkButton";
-import { ArticleContent } from "@/components/ArticleContent";
+import { BriefResults } from "@/components/BriefResults";
 import { Spinner } from "@/components/Spinner";
 
 type FeedViewProps = {
@@ -38,8 +32,7 @@ const FeedView = ({
 
     const observer = new IntersectionObserver(
       entries => {
-        const entry = entries[0];
-        if (entry?.isIntersecting) {
+        if (entries[0]?.isIntersecting) {
           onLoadMore();
         }
       },
@@ -69,19 +62,7 @@ const FeedView = ({
   if (error && !articles.length) {
     return (
       <div className="card" style={{ marginTop: 24 }}>
-        <p className="small" style={{ margin: 0 }}>
-          {error}
-        </p>
-      </div>
-    );
-  }
-
-  if (!articles.length) {
-    return (
-      <div className="card" style={{ marginTop: 24 }}>
-        <p className="small" style={{ margin: 0 }}>
-          No feed articles yet.
-        </p>
+        <p className="small" style={{ margin: 0 }}>{error}</p>
       </div>
     );
   }
@@ -90,67 +71,10 @@ const FeedView = ({
     <section style={{ marginTop: 24 }}>
       <h2 style={{ marginBottom: 12 }}>Your Feed</h2>
 
-      <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-        {articles.map(article => {
-          const descriptionText =
-            article.summary ?? article.description ?? "No summary available.";
-
-          const bookmarked = isBookmarked(article.link);
-          const read = isRead(article.link);
-          const feedback = getArticleFeedback(article.link);
-
-          return (
-            <li key={article.link} className="card" style={{ marginBottom: 12 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  gap: 12,
-                  marginBottom: 6,
-                }}
-              >
-                <div className="small" style={{ marginBottom: 6 }}>
-                  <ArticleMetaData
-                    sourceName={article.sourceName}
-                    publishedAt={article.publishedAt}
-                    read={read}
-                  />
-
-                  <ArticleFeedback
-                    article={article}
-                    value={feedback}
-                    onChange={() => {
-                      // child handles persistence; parent feed stays source-light
-                    }}
-                  />
-                </div>
-
-                <BookmarkButton
-                  article={article}
-                  bookmarked={bookmarked}
-                  onChange={() => {
-                    // child handles persistence; feed does not need local bookmark state
-                  }}
-                />
-              </div>
-
-              <ArticleContent
-                article={article}
-                descriptionText={descriptionText}
-                onRead={() => {
-                  // child handles persistence; feed reads from history helpers on render
-                }}
-              />
-            </li>
-          );
-        })}
-      </ul>
+      <BriefResults articles={articles} />
 
       {error ? (
-        <p className="small" style={{ marginTop: 12 }}>
-          {error}
-        </p>
+        <p className="small" style={{ marginTop: 12 }}>{error}</p>
       ) : null}
 
       {loadingMore ? (

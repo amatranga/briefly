@@ -1,5 +1,12 @@
-import he from 'he';
+import he from "he";
+import type {
+  Article,
+  Topic,
+} from "@/lib/types";
+import { TOPICS } from "@/lib/types";
 
+const articleLimit = 5;
+const DEFAULT_TOPICS: Topic[] = ["business"];
 /**
  * Collapses consecutive whitespace into a single space and trims leading/trailing whitespace.
  *
@@ -56,4 +63,41 @@ const cleanText = (text: string) => (
   )
 );
 
-export { normalizeText, cleanText, normalizeWhitespace };
+const parseTopics = (param: string | null): Topic[] => {
+  if (!param) return DEFAULT_TOPICS;
+
+  const allowed = new Set(TOPICS);
+  const parsed = param
+    .split(",")
+    .map(p => p.trim())
+    .filter((t): t is Topic => allowed.has(t as Topic));
+
+  return parsed.length ? parsed : DEFAULT_TOPICS;
+};
+
+const parseLimit = (param: string | null): number => {
+  const n = Number(param);
+  return Number.isFinite(n) && n >= 1 && n <= 10 ? n : articleLimit;
+};
+
+const dedupeArticlesByLink = (items: Article[]): Article[] => {
+  const seen = new Set<string>();
+  const next: Article[] = [];
+
+  for (const item of items) {
+    if (seen.has(item.link)) continue;
+    seen.add(item.link);
+    next.push(item);
+  }
+
+  return next;
+};
+
+export {
+  normalizeText,
+  cleanText,
+  normalizeWhitespace,
+  parseTopics,
+  parseLimit,
+  dedupeArticlesByLink,
+};
