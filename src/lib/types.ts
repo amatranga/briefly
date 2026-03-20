@@ -56,7 +56,7 @@ type RssSource = {
 
 type TopicWeights = Record<Topic, number>;
 
-const VIEWS = [ "brief", "bookmarks", "history", "briefs" ];
+const VIEWS = [ "brief", "feed", "bookmarks", "history", "briefs" ];
 type View = (typeof VIEWS)[number];
 
 type FeedHealth = {
