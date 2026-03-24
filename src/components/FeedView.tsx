@@ -76,7 +76,7 @@ const FeedView = ({
 
       <BriefResults articles={articles} />
 
-      {error ? (
+      {error && !articles.length? (
         <p className="small" style={{ marginTop: 12 }}>{error}</p>
       ) : null}
 
