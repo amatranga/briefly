@@ -57,6 +57,7 @@ const HomePage = () => {
   const [feedHasMore, setFeedHasMore] = useState(true);
 
   const didBootstrapRef = useRef(false);
+  const feedOffsetRef = useRef(0);
 
   useEffect(() => {
     const urlTopics = searchParams.get("topics");
@@ -151,6 +152,9 @@ const HomePage = () => {
     async ({ reset = false }: { reset?: boolean } = {}) => {
       if (reset) {
         setFeedLoading(true);
+        feedOffsetRef.current = 0;
+        setFeedOffset(0);
+        setFeedHasMore(true);
       } else {
         setFeedLoadingMore(true);
       }
@@ -158,13 +162,15 @@ const HomePage = () => {
       setFeedError(null);
 
       try {
+        const currentOffset = reset ? 0 : feedOffsetRef.current;
+
         const res = await fetch("/api/feed", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             topics,
             limit: feedPageSize,
-            offset: reset ? 0 : feedOffset,
+            offset: currentOffset,
             topicWeights,
             userPreferences: getUserPreferences(),
           }),
@@ -179,29 +185,42 @@ const HomePage = () => {
         const nextItems = (data.items ?? []) as Article[];
 
         if (reset) {
-          setFeedArticles(dedupeArticlesByLink(nextItems));
-          setFeedOffset(nextItems.length);
+          const deduped = dedupeArticlesByLink(nextItems);
+          setFeedArticles(deduped);
+
+          const nextOffset =
+            typeof data.nextOffset === "number" ? data.nextOffset : deduped.length;
+
+          feedOffsetRef.current = nextOffset;
+          setFeedOffset(nextOffset);
         } else {
           setFeedArticles(prev => {
             const merged = dedupeArticlesByLink([...prev, ...nextItems]);
-            setFeedOffset(merged.length);
+
+            const nextOffset =
+              typeof data.nextOffset === "number" ? data.nextOffset : merged.length;
+
+            feedOffsetRef.current = nextOffset;
+            setFeedOffset(nextOffset);
+
             return merged;
           });
         }
 
-        if (typeof data.hasMore === "boolean") {
-          setFeedHasMore(data.hasMore);
-        } else {
-          setFeedHasMore(nextItems.length === feedPageSize);
-        }
+        setFeedHasMore(
+          typeof data.hasMore === "boolean"
+            ? data.hasMore
+            : nextItems.length === feedPageSize
+        );
       } catch (e: any) {
         setFeedError(e?.message ?? "Something went wrong");
+        setFeedHasMore(false);
       } finally {
         setFeedLoading(false);
         setFeedLoadingMore(false);
       }
     },
-    [topics, feedOffset, topicWeights]
+    [topics, topicWeights]
   );
 
   useEffect(() => {
@@ -214,9 +233,6 @@ const HomePage = () => {
 
   useEffect(() => {
     if (!didBootstrapRef.current) return;
-
-    setFeedOffset(0);
-    setFeedHasMore(true);
     void loadFeedPage({ reset: true });
   }, [topics, topicWeights, loadFeedPage]);
 
@@ -261,11 +277,15 @@ const HomePage = () => {
             loading={feedLoading}
             loadingMore={feedLoadingMore}
             error={feedError}
-            hasMore={feedHasMore} 
+            hasMore={feedHasMore}
             onLoadMore={() => {
-              if (!feedLoading && !feedLoadingMore && feedHasMore) {
+              if (!feedLoading && !feedLoadingMore && feedHasMore && !feedError) {
                 void loadFeedPage();
               }
+            }}
+            onRetry={() => {
+              setFeedHasMore(true);
+              void loadFeedPage();
             }}
           />
         )}
