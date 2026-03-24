@@ -1,234 +1,250 @@
 # Briefly
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square)](https://nextjs.org)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square)](https://nextjs.org)
+[![React](https://img.shields.io/badge/React-19-149ECA?style=flat-square)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![Jest](https://img.shields.io/badge/Tests-Jest-C21325?style=flat-square)](https://jestjs.io)
 
+Briefly is a personalized news briefing app built with Next.js and TypeScript. It aggregates articles from multiple RSS feeds, ranks them by topic relevance and user preference signals, and presents the results as either a concise brief or a paginated feed.
 
-Briefly is a lightweight news brief generator that aggregates articles from multiple RSS feeds, ranks them by relevance, and delivers a quick, curated briefing based on user-selected topics.
+## v1.5 Highlights
 
-The project focuses on performance, caching strategies, and simple NLP techniques to provide fast, personalized news summaries.
-
+- Dedicated feed view with incremental loading
+- Manual topic weighting controls in Settings
+- Learned topic and keyword affinities based on reading behavior
+- Per-article feedback signals to tune personalization
+- Request validation with Zod for brief and feed APIs
+- Expanded feed health diagnostics through the health endpoint
 
 ## Features
 
-### Core
-- Topic-based RSS aggregation
-- Concurrent feed fetching
-- Intelligent article ranking
-- Optional AI summaries
-- API caching for RSS and briefs
+### Brief generation
+- Topic-based RSS aggregation across multiple sources
+- Concurrent feed fetching with in-memory response caching
+- Deduplication to remove repeated stories across feeds
+- Relevance ranking using topic keywords, topic weights, and learned user preferences
+- Optional AI summaries with a description-based fallback
 
-### v1.1
-- Shareable URLs
-- LocalStorage preferences
-- Dark mode
-- Regenerate briefs
-- Keyword-based relevance scoring
+### Reading experience
+- Brief view for top ranked stories
+- Feed view with pagination and infinite scroll
+- Bookmarks / read later list stored locally
+- Reading history stored across sessions
+- Historical brief log for reloading previous runs
+- Shareable URL state for selected topics and article limit
 
-### v1.2
-- Bookmarks / Read Later
-- Persistent reading history
-- Historical brief log
-- Reusable SearchInput component
-- Extracted BriefView architecture
+### Personalization
+- Topic weight editor with a 1-5 scoring range per topic
+- Learned topic affinities based on clicks, bookmarks, and explicit feedback
+- Keyword affinity tracking to improve ranking over time
+- Reset personalization action from Settings
 
-### v1.3
-- Smart article ranking using a TF-IDF inspired scoring system
-- Improved ranking controls
-- Article deduplication
-- Feed health monitoring
-
-### v1.4
-- Enhanced personalization and feedback
-- Settings and ranking controls
-- Comprehensive test coverage
+### Reliability
+- Feed health tracking for successful and failed fetches
+- Input validation on API requests with Zod schemas
+- Jest coverage across app routes, components, and library modules
 
 ## Tech Stack
 
 ### Frontend
-- Next.js (App Router)
-- React
+- Next.js App Router
+- React 19
 - TypeScript
 - CSS
 
 ### Backend
-- Next.js API Routes
-- RSS parsing
-- In-memory caching layer
-- Optional OpenAI integration
+- Next.js route handlers
+- RSS parsing with `fast-xml-parser`
+- In-memory caching
+- Optional OpenAI summarization
+- Zod request validation
 
+### Testing
+- Jest
+- Testing Library
 
 ## Architecture
+
 ```text
-User selects topics
-│
-▼
-POST /api/brief
-│
-▼
-Select relevant RSS feeds
-│
-▼
+User selects topics, limit, and ranking settings
+|
+v
+POST /api/brief or POST /api/feed
+|
+v
+Validate request payload with Zod
+|
+v
+Select matching RSS sources
+|
+v
 Fetch feeds concurrently
-│
-▼
-Feed health monitoring
-│
-▼
+|
+v
+Update feed health state
+|
+v
 Deduplicate articles
-│
-▼
-TF-IDF ranking + topic weighting
-│
-▼
-(Optional) AI summarization
-│
-▼
-Return curated brief
+|
+v
+Rank using keywords, topic weights, and learned affinities
+|
+v
+Generate summaries (AI or description fallback)
+|
+v
+Return brief or paginated feed response
 ```
 
+## API Endpoints
 
-## Example API Response
+### `POST /api/brief`
+Generates a ranked briefing for the selected topics.
+
+Request body:
 
 ```json
 {
-  "items": [
-    {
-      "title": "Tech Startup Raises $50M",
-      "sourceName": "TechCrunch",
-      "link": "https://example.com/article",
-      "summary": "A startup raised significant funding as investor interest continues to grow."
+  "topics": ["tech", "business"],
+  "limit": 5,
+  "force": false,
+  "topicWeights": {
+    "business": 3,
+    "tech": 5,
+    "markets": 2,
+    "sports": 1,
+    "entertainment": 1
+  },
+  "userPreferences": {
+    "topicAffinity": {
+      "business": 0,
+      "tech": 1.5,
+      "markets": 0,
+      "sports": 0,
+      "entertainment": 0
+    },
+    "keywordAffinity": {
+      "ai": 1.5
+    },
+    "articleFeedback": {
+      "https://example.com/article": "up"
     }
-  ],
-  "errors": [],
-  "cache": "miss",
-  "lastUpdated": "2026-03-03T18:15:00.000Z"
+  }
 }
 ```
 
+### `POST /api/feed`
+Returns a paginated list of ranked articles for the selected topics.
 
-## Running Locally
-Clone the repo:
+Request body:
 
-```Bash
-git clone https://github.com/amatranga/briefly.git
-cd briefly
+```json
+{
+  "topics": ["tech", "business"],
+  "limit": 10,
+  "offset": 0,
+  "topicWeights": {
+    "business": 3,
+    "tech": 5,
+    "markets": 2,
+    "sports": 1,
+    "entertainment": 1
+  }
+}
 ```
 
-Install dependencies:
-```Bash
+Example response:
+
+```json
+{
+  "items": [],
+  "errors": [],
+  "hasMore": true,
+  "nextOffset": 10,
+  "cache": "miss",
+  "lastUpdated": "2026-03-24T18:15:00.000Z"
+}
+```
+
+### `GET /api/health`
+Reports service status, feed health information, and AI configuration state.
+
+Example response:
+
+```json
+{
+  "status": "ok",
+  "openaiConfigured": true,
+  "openAiEnabled": "true",
+  "checkedAt": "2026-03-24T18:15:00.000Z",
+  "feeds": []
+}
+```
+
+## Getting Started
+
+### Prerequisites
+- Node.js 20 or newer
+- npm
+
+### Install
+
+```bash
 npm install
 ```
 
-Run the development server:
-```Bash
+### Run the development server
+
+```bash
 npm run dev
 ```
 
-Open in browser
-```
-http://localhost:3000
+Open `http://localhost:3000` in your browser.
+
+### Run tests
+
+```bash
+npm test
 ```
 
+Generate a coverage report:
+
+```bash
+npm run test:coverage
+```
 
 ## Environment Variables
-Optional AI summaries can be enabled with:
-```
-OPEN_AI_API_KEY=your_key_here
+
+AI summaries are optional. If AI is disabled, Briefly falls back to a summary generated from the article description.
+
+```bash
+OPENAI_API_KEY=your_key_here
 ENABLE_AI_SUMMARIES=true
 ```
-If disabled, summaries are generated using the article description.
 
+## Topics
 
-## Current Topics
+Briefly currently supports:
+
 - Business
 - Tech
 - Markets
 - Sports
 - Entertainment
-Each topic maps to one or more RSS feeds.
 
+Each topic maps to one or more RSS sources and contributes to article ranking through keywords, manual topic weights, and learned preference signals.
 
-## Future Enhancements
-Planned improvements include:
-- Additional RSS sources
+## Project Structure
 
-
-## Version
-
-**v1.2**
-- Bookmarks
-  - Users can save articles to a persistent reading list stored in localStorage. Bookmarks can be searched and removed.
-- Reading History
-  - Articles are automatically marked as read when opened and tracked across sessions.
-- Historical Brief Log
-  - Generated briefs are stored locally so users can revisit previous summaries and reload them into the main view
-- UI Improvements
-  - Extracted `BriefView` component from page layout
-  - Reusable `SearchInput` component
-  - Improved article metadata display
-  - Better layout separation between views
-- Architecture Improvements
-  - Modular view components
-  - Cleaner page orchestration logic
-  - Reduced UI duplication
- 
-**v1.3**
-
-v1.3 introduces smarter article ranking and improved reliability monitoring.
-
-- Smart Article Ranking
-  - Briefly now uses a TF-IDF-inspired scoring system to prioritize the most relevant stories.
-
-  - Ranking considers:
-    - Topic keyword matches
-    - Title vs description weighting
-    - User-defined topic priority
-    - Keyword rarity within the article set
-
-  - This produces a much more relevant daily brief.
-
-- Article Deduplication
-  - Duplicate stories appearing across multiple RSS feeds are automatically detected and removed using normalized title fingerprints.
-    This ensures users see unique stories instead of repeated headlines.
-
-- Feed Health Monitoring
-  - Briefly now tracks the health of RSS feeds.
-
-  - For each source the system records:
-    - Last successful fetch
-    - Last failure
-    - Last error message
-    - Article count
-    - Last checked timestamp
-
-  - Feed health is exposed through the `/api/health` endpoint.
-
-- Improved Ranking Controls
-  - Users can now adjust **Topic Priority** to influence how strongly articles from selected topics are ranked.
-
-**v1.4**
-
-v1.4 introduces enhanced personalization and comprehensive test coverage
-
-- Enhanced Personalization
-  - Learned Topic Affinities
-    - Tracks user preferences over time
-    - Driven by clicks, bookmarks, explicit article feedback
-
-- Comprehensive Test Coverage
-  - Tests implemented for all components, views, and page orchestration
-  - Coverage includes rendering, user interaction, state updates, side effects, async flows
-  
-
-
-## Author
-Alex Matranga
-
-GitHub: [https://github.com/amatranga](https://github.com/amatranga)
-
+```text
+src/
+  app/
+    api/
+  components/
+  lib/
+  test/
+```
 
 ## License
 
-MIT
+ISC
